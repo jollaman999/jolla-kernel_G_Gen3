@@ -30,6 +30,7 @@ static struct msm_panel_common_pdata *mipi_lgit_pdata;
 static struct dsi_buf lgit_tx_buf;
 static struct dsi_buf lgit_rx_buf;
 static int __init mipi_lgit_lcd_init(void);
+static int skip_init;
 
 #define DSV_ONBST 57
 
@@ -111,14 +112,19 @@ int mipi_lgit_lcd_ief_on(void)
 
 	mdelay(10);
 
-	MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x10000000);//HS mode
-	cnt = mipi_dsi_cmds_tx(&lgit_tx_buf,
-		mipi_lgit_pdata->power_on_set_2,
-		mipi_lgit_pdata->power_on_set_size_2);
-	MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x14000000);//LP mode
+	if(!skip_init){
+		MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x10000000);
+		ret = mipi_dsi_cmds_tx(&lgit_tx_buf,
+				mipi_lgit_pdata->power_on_set_2,
+				mipi_lgit_pdata->power_on_set_size_2);
+		MIPI_OUTP(MIPI_DSI_BASE + 0x38, 0x14000000);
+		if (ret < 0) {
+			pr_err("%s: failed to transmit power_on_set_2 cmds\n", __func__);
+			return ret;
+		}
+	}
+	skip_init = false;
 
-	if (cnt < 0)
-		return cnt;
 	rc = gpio_request(DSV_ONBST,"DSV_ONBST_en");
 	if (rc) {
 		printk(KERN_INFO "%s: DSV_ONBST Request Fail \n", __func__);
@@ -236,6 +242,7 @@ static int mipi_lgit_lcd_probe(struct platform_device *pdev)
 
 	printk(KERN_INFO "%s: mipi lgit lcd probe start\n", __func__);
 
+	skip_init = true;
 	msm_fb_add_device(pdev);
 
 	return 0;
