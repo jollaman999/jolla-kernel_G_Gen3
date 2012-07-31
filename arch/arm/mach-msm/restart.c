@@ -251,6 +251,7 @@ void lge_set_magic_for_subsystem(const char* subsys_name)
 
 void lge_set_kernel_crash_magic(void)
 {
+	pet_watchdog();
 	if (subsys_crash_magic == 0)
 		__raw_writel(0x6d630100, restart_reason);
 	else
