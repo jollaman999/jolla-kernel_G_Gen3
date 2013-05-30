@@ -5175,7 +5175,6 @@ static int iw_set_dynamic_mcbc_filter(struct net_device *dev,
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
     tpSirWlanSetRxpFilters wlanRxpFilterParam;
     tHalHandle hHal = WLAN_HDD_GET_HAL_CTX(pAdapter);
-    VOS_STATUS vstatus = VOS_STATUS_E_FAILURE;
     tpSirRcvFltMcAddrList mc_addr_list_ptr;
     int idx;
     eHalStatus ret_val;
@@ -5189,6 +5188,7 @@ static int iw_set_dynamic_mcbc_filter(struct net_device *dev,
 
     if (HDD_MULTICAST_FILTER_LIST == pRequest->mcastBcastFilterSetting)
     {
+#ifdef WLAN_FEATURE_PACKET_FILTERING
 
         mc_addr_list_ptr = vos_mem_malloc(sizeof(tSirRcvFltMcAddrList));
         if (NULL == mc_addr_list_ptr)
@@ -5223,6 +5223,7 @@ static int iw_set_dynamic_mcbc_filter(struct net_device *dev,
                    __func__);
             return -EINVAL;
         }
+#endif //WLAN_FEATURE_PACKET_FILTERING
     }
     else
     {
@@ -5248,24 +5249,9 @@ static int iw_set_dynamic_mcbc_filter(struct net_device *dev,
                 pRequest->mcastBcastFilterSetting;
             wlanRxpFilterParam->setMcstBcstFilter = TRUE;
 
-            if ((pHddCtx->cfg_ini->fhostArpOffload) &&
-                (eConnectionState_Associated ==
-                 (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState))
-            {
-                vstatus = hdd_conf_hostarpoffload(pAdapter, TRUE);
-                if (!VOS_IS_STATUS_SUCCESS(vstatus))
-                {
-                    hddLog(VOS_TRACE_LEVEL_ERROR,
-                           "%s:Failed to enable ARPOFFLOAD Feature %d",
-                           __func__, vstatus);
-                }
-                else
-                {
-                    wlanRxpFilterParam->configuredMcstBcstFilterSetting =
-                           pHddCtx->configuredMcastBcastFilter &
-                            ~(HDD_MCASTBCASTFILTER_FILTER_ALL_BROADCAST);
-                }
-            }
+            hdd_conf_hostoffload(pAdapter, TRUE);
+            wlanRxpFilterParam->configuredMcstBcstFilterSetting =
+                                pHddCtx->configuredMcastBcastFilter;
 
             hddLog(VOS_TRACE_LEVEL_INFO, "%s:MC/BC changed Req %d Set %d En %d",
                    __func__,
@@ -5297,7 +5283,6 @@ static int iw_clear_dynamic_mcbc_filter(struct net_device *dev,
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
     hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX(pAdapter);
     tpSirWlanSetRxpFilters wlanRxpFilterParam;
-    VOS_STATUS vstatus;
     hddLog(VOS_TRACE_LEVEL_INFO_HIGH, "%s: ", __func__);
 
     //Reset the filter to INI value as we have to clear the dynamic filter
@@ -5318,27 +5303,9 @@ static int iw_clear_dynamic_mcbc_filter(struct net_device *dev,
             pHddCtx->configuredMcastBcastFilter;
         wlanRxpFilterParam->setMcstBcstFilter = TRUE;
 
-        if ((pHddCtx->cfg_ini->fhostArpOffload) &&
-            (eConnectionState_Associated ==
-             (WLAN_HDD_GET_STATION_CTX_PTR(pAdapter))->conn_info.connState))
-        {
-            vstatus = hdd_conf_hostarpoffload(pAdapter, TRUE);
-            if (!VOS_IS_STATUS_SUCCESS(vstatus))
-            {
-                hddLog(VOS_TRACE_LEVEL_ERROR,
-                       "%s:Failed to enable ARPOFFLOAD Feature %d",
-                       __func__, vstatus);
-            }
-            else
-            {
-                hddLog(VOS_TRACE_LEVEL_INFO, "Clear the filter: %d",
-                         pHddCtx->configuredMcastBcastFilter &
-                        ~(HDD_MCASTBCASTFILTER_FILTER_ALL_BROADCAST));
-                wlanRxpFilterParam->configuredMcstBcstFilterSetting =
-                        (pHddCtx->configuredMcastBcastFilter &
-                         HDD_MCASTBCASTFILTER_FILTER_ALL_MULTICAST);
-            }
-        }
+        hdd_conf_hostoffload(pAdapter, TRUE);
+        wlanRxpFilterParam->configuredMcstBcstFilterSetting =
+                            pHddCtx->configuredMcastBcastFilter;
 
         if (eHAL_STATUS_SUCCESS !=
                   sme_ConfigureRxpFilter(WLAN_HDD_GET_HAL_CTX(pAdapter),
