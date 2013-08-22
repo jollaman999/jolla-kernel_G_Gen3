@@ -4923,7 +4923,7 @@ typedef PACKED_PRE struct PACKED_POST
  *PNO Messages
  *-------------------------------------------------------------------------*/
 /*Max number of channels that a network can be found on*/
-#define WLAN_HAL_PNO_MAX_NETW_CHANNELS  26
+#define WLAN_HAL_PNO_MAX_NETW_CHANNELS  60
 
 /*Max number of channels that a network can be found on*/
 #define WLAN_HAL_PNO_MAX_NETW_CHANNELS_EX  60
@@ -4947,6 +4947,7 @@ typedef enum
    ePNO_MODE_IMMEDIATE,
    ePNO_MODE_ON_SUSPEND,
    ePNO_MODE_ON_RESUME,
+   ePNO_MODE_DELAY,
    ePNO_MODE_MAX = WLAN_HAL_MAX_ENUM_SIZE
 } ePNOMode;
 
