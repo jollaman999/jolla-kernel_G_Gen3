@@ -999,6 +999,8 @@ struct hdd_context_s
      */
     spinlock_t schedScan_lock;
 
+    v_U8_t sus_res_mcastbcast_filter;
+
     // Flag keeps track of wiphy suspend/resume
     v_BOOL_t isWiphySuspended;
 
