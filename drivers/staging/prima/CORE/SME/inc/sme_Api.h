@@ -92,6 +92,9 @@
 
 #define SME_INVALID_COUNTRY_CODE "XX"
 
+//Macro to disable split scan
+#define SME_DISABLE_SPLIT_SCAN   255
+
 /*-------------------------------------------------------------------------- 
   Type declarations
   ------------------------------------------------------------------------*/
@@ -2807,4 +2810,15 @@ eHalStatus sme_SetPhyMode(tHalHandle hHal, eCsrPhyMode phyMode);
   -------------------------------------------------------------------------------*/
 eCsrPhyMode sme_GetPhyMode(tHalHandle hHal);
 
+
+/*--------------------------------------------------------------------------
+   \brief sme_enable_disable_split_scan() - a wrapper function to set the split
+                                           scan parameter.
+   This is a synchronous call
+   \param hHal - The handle returned by macOpen
+   \return None.
+   \sa
+  --------------------------------------------------------------------------*/
+void sme_enable_disable_split_scan (tHalHandle hHal, tANI_U8 nNumStaChan,
+                                    tANI_U8 nNumP2PChan);
 #endif //#if !defined( __SME_API_H )

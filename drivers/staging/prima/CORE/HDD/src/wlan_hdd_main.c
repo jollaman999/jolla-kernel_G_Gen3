@@ -167,6 +167,13 @@ static int wlan_hdd_inited;
 #define SIZE_OF_SETROAMMODE             11    /* size of SETROAMMODE */
 #define SIZE_OF_GETROAMMODE             11    /* size of GETROAMMODE */
 
+/*
+ * Driver miracast parameters 0-Disabled
+ * 1-Source, 2-Sink
+ */
+#define WLAN_HDD_DRIVER_MIRACAST_CFG_MIN_VAL 0
+#define WLAN_HDD_DRIVER_MIRACAST_CFG_MAX_VAL 2
+
 #ifdef WLAN_OPEN_SOURCE
 static struct wake_lock wlan_wake_lock;
 #endif
@@ -2041,6 +2048,37 @@ int hdd_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
                goto exit;
            }
            pCfg->nActiveMaxChnTime = val;
+       }
+       else if ( strncasecmp(command, "MIRACAST", 8) == 0 )
+       {
+           tANI_U8 filterType = 0;
+           tANI_U8 *value;
+           value = command + 9;
+
+           /* Convert the value from ascii to integer */
+           ret = kstrtou8(value, 10, &filterType);
+           if (ret < 0)
+           {
+               /* If the input value is greater than max value of datatype,	1993
+                * then also kstrtou8 fails	1994
+                */
+              VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                              "%s: kstrtou8 failed range ", __func__);
+              ret = -EINVAL;
+              goto exit;
+           }
+           if ((filterType < WLAN_HDD_DRIVER_MIRACAST_CFG_MIN_VAL ) ||
+               (filterType > WLAN_HDD_DRIVER_MIRACAST_CFG_MAX_VAL))
+           {
+               VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                      "%s: Accepted Values are 0 to 2. 0-Disabled, 1-Source,"
+                      " 2-Sink ", __func__);
+               ret = -EINVAL;
+               goto exit;
+           }
+           //Filtertype value should be either 0-Disabled, 1-Source, 2-sink
+           pHddCtx->drvr_miracast = filterType;
+           hdd_tx_rx_pkt_cnt_stat_timer_handler(pHddCtx);
        }
        else {
            hddLog( VOS_TRACE_LEVEL_WARN, "%s: Unsupported GUI command %s",
@@ -4922,6 +4960,21 @@ void hdd_wlan_exit(hdd_context_t *pHddCtx)
    // all scans will be cancelled.
    hdd_abort_mac_scan( pHddCtx );
 
+   //Stop the traffic monitor timer
+   if ( VOS_TIMER_STATE_RUNNING ==
+                        vos_timer_getCurrentState(&pHddCtx->tx_rx_trafficTmr))
+   {
+        vos_timer_stop(&pHddCtx->tx_rx_trafficTmr);
+   }
+
+   // Destroy the traffic monitor timer
+   if (!VOS_IS_STATUS_SUCCESS(vos_timer_destroy(
+                         &pHddCtx->tx_rx_trafficTmr)))
+   {
+       hddLog(VOS_TRACE_LEVEL_ERROR,
+           "%s: Cannot deallocate Traffic monitor timer", __func__);
+   }
+
    //Disable IMPS/BMPS as we do not want the device to enter any power
    //save mode during shutdown
    sme_DisablePowerSave(pHddCtx->hHal, ePMC_IDLE_MODE_POWER_SAVE);
@@ -5916,6 +5969,14 @@ int hdd_wlan_startup(struct device *dev )
    // Initialize the restart logic
    wlan_hdd_restart_init(pHddCtx);
 
+   //Register the traffic monitor timer now
+   if ( pHddCtx->cfg_ini->dynSplitscan)
+   {
+       vos_timer_init(&pHddCtx->tx_rx_trafficTmr,
+                     VOS_TIMER_TYPE_SW,
+                     hdd_tx_rx_pkt_cnt_stat_timer_handler,
+                     (void *)pHddCtx);
+   }
    goto success;
 
 err_nl_srv:
