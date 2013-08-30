@@ -2810,6 +2810,16 @@ eHalStatus sme_SetPhyMode(tHalHandle hHal, eCsrPhyMode phyMode);
   -------------------------------------------------------------------------------*/
 eCsrPhyMode sme_GetPhyMode(tHalHandle hHal);
 
+/*--------------------------------------------------------------------------
+   \brief sme_isSta_p2p_clientConnected() - a wrapper function to check if there
+                                         is any connected session .
+   This is a synchronous call
+   \param hHal - The handle returned by macOpen
+   \return VOS_STATUS - SME passed the request to CSR successfully.
+           Other status means SME is failed to send the request.
+   \sa
+ --------------------------------------------------------------------------*/
+VOS_STATUS sme_isSta_p2p_clientConnected(tHalHandle hHal);
 
 /*--------------------------------------------------------------------------
    \brief sme_enable_disable_split_scan() - a wrapper function to set the split
