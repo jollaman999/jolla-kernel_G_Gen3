@@ -2372,11 +2372,6 @@ eHalStatus hdd_smeRoamCallback( void *pContext, tCsrRoamInfo *pRoamInfo, tANI_U3
                 hdd_context_t* pHddCtx = (hdd_context_t*)pAdapter->pHddCtx;
 
                 if((pHddCtx) &&
-                   (pHddCtx->cfg_ini->enableDynamicDTIM ||
-                     pHddCtx->cfg_ini->enableModulatedDTIM) &&
-                   (WLAN_HDD_INFRA_STATION == pAdapter->device_mode) &&
-                   (eANI_BOOLEAN_TRUE == pAdapter->higherDtimTransition) &&
-                   (pHddCtx->cfg_ini->fIsBmpsEnabled) &&
                    (VOS_TRUE == pHddStaCtx->hdd_ReassocScenario) &&
                    (TRUE == pHddCtx->hdd_wlan_suspended) &&
                    (eCSR_ROAM_RESULT_NONE == roamResult))
