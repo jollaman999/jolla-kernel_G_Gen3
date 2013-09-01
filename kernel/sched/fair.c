@@ -2755,7 +2755,7 @@ enqueue_task_fair(struct rq *rq, struct task_struct *p, int flags)
 	}
 
 	if (!se) {
-		update_rq_runnable_avg(rq, rq->nr_running);
+		update_rq_runnable_avg(rq, rq->cfs.h_nr_running);
 		inc_nr_running(rq);
 	}
 	hrtick_update(rq);
@@ -3999,7 +3999,7 @@ static void __update_blocked_averages_cpu(struct task_group *tg, int cpu)
 			list_del_leaf_cfs_rq(cfs_rq);
 	} else {
 		struct rq *rq = rq_of(cfs_rq);
-		update_rq_runnable_avg(rq, rq->nr_running);
+		update_rq_runnable_avg(rq, rq->cfs.h_nr_running);
 	}
 }
 
