@@ -8315,7 +8315,7 @@ void sme_enable_disable_split_scan (tHalHandle hHal, tANI_U8 nNumStaChan,
                  __func__, nNumStaChan, nNumP2PChan);
 
     return;
-
+}
 /*-------------------------------------------------------------------------
   \brief sme_SetCurrDeviceMode() - Sets the current operating device mode.
   \param hHal - The handle returned by macOpen.
