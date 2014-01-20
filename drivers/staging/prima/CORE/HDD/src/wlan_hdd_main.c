@@ -101,6 +101,8 @@
 #include <bapInternal.h>
 #endif // WLAN_BTAMP_FEATURE
 
+#include <linux/inetdevice.h>
+#include <net/addrconf.h>
 #include <linux/wireless.h>
 #include <net/cfg80211.h>
 #include "wlan_hdd_cfg80211.h"
@@ -4063,10 +4065,16 @@ VOS_STATUS hdd_stop_adapter( hdd_context_t *pHddCtx, hdd_adapter_t *pAdapter )
          {
             hdd_abort_mac_scan(pHddCtx);
          }
-#ifdef WLAN_OPEN_SOURCE
 #ifdef WLAN_NS_OFFLOAD
+#ifdef WLAN_OPEN_SOURCE
          cancel_work_sync(&pAdapter->ipv6NotifierWorkQueue);
 #endif
+         if (pAdapter->ipv6_notifier_registered)
+         {
+            hddLog(LOG1, FL("Unregistered IPv6 notifier"));
+            unregister_inet6addr_notifier(&pAdapter->ipv6_notifier);
+            pAdapter->ipv6_notifier_registered = false;
+         }
 #endif
 
          if (test_bit(SME_SESSION_OPENED, &pAdapter->event_flags)) 
