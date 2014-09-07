@@ -574,7 +574,7 @@ static int vmac_final(struct shash_desc *pdesc, u8 *out)
 
 	mac = vmac(NULL, 0, nonce, NULL, ctx);
 	memcpy(out, &mac, sizeof(vmac_t));
-	memset(&mac, 0, sizeof(vmac_t));
+	memzero_explicit(&mac, sizeof(vmac_t));
 	memset(&ctx->__vmac_ctx, 0, sizeof(struct vmac_ctx));
 	return 0;
 }
