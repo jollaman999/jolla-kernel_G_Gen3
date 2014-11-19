@@ -205,6 +205,10 @@ config CPU_FREQ_DEFAULT_GOV_PEGASUSQ
 	help
 	  Use the CPUFreq governor 'pegasusq' as default.
 
+config CPU_FREQ_DEFAULT_GOV_DANCEDANCE
+  bool "dancedance"
+  select CPU_FREQ_GOV_DANCEDANCE
+
 endchoice
 
 config CPU_FREQ_GOV_PERFORMANCE
@@ -410,6 +414,10 @@ config CPU_FREQ_GOV_NIGHTMARE
 
 config CPU_FREQ_GOV_PEGASUSQ
 	tristate "'pegasusq' cpufreq policy governor"
+
+config CPU_FREQ_GOV_DANCEDANCE
+  tristate "'dancedance' cpufreq governor"
+  depends on CPU_FREQ 
 
 menu "x86 CPU frequency scaling drivers"
 depends on X86
