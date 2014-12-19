@@ -104,7 +104,7 @@
 #include "u_bam_data.c"
 #include "f_hid.h"
 #include "f_hid_android_keyboard.c"
-#include "f_hid_android_mouse.c
+#include "f_hid_android_mouse.c"
 #include "f_mbim.c"
 #ifndef CONFIG_USB_G_LGE_ANDROID_DISABLED
 #include "f_qc_ecm.c"
@@ -2027,7 +2027,7 @@ static struct android_usb_function *supported_functions[] = {
 #ifndef CONFIG_USB_G_LGE_ANDROID	
 	&uasp_function,
 #endif	
-	&hid_funtion,
+	&hid_function,
 	NULL
 };
 
