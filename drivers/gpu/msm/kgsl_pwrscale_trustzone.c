@@ -214,14 +214,18 @@ static void tz_busy(struct kgsl_device *device,
 	device->on_time = ktime_to_us(ktime_get());
 }
 
+// jollaman999 - Use kgsl min power level when sleep
 static void tz_sleep(struct kgsl_device *device,
 	struct kgsl_pwrscale *pwrscale)
 {
 	struct tz_priv *priv = pwrscale->priv;
+	struct kgsl_pwrctrl *pwr = &device->pwrctrl;
 
-	__secure_tz_entry2(TZ_RESET_ID, 0, 0);
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
+
+	/* Make sure the GPU frequency drops. */
+	kgsl_pwrctrl_pwrlevel_change(device, pwr->min_pwrlevel);
 }
 
 #ifdef CONFIG_MSM_SCM
