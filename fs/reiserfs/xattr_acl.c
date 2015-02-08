@@ -444,7 +444,7 @@ int reiserfs_acl_chmod(struct inode *inode)
 		return 0;
 	if (IS_ERR(acl))
 		return PTR_ERR(acl);
-	error = __posix_acl_chmod(&acl, GFP_NOFS, inode->i_mode);
+	error = posix_acl_chmod(&acl, GFP_NOFS, inode->i_mode);
 	if (error)
 		return error;
 
