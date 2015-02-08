@@ -547,15 +547,6 @@ redirty_out:
 
 #define MAX_DESIRED_PAGES_WP	4096
 
-static int __f2fs_writepage(struct page *page, struct writeback_control *wbc,
-			void *data)
-{
-	struct address_space *mapping = data;
-	int ret = mapping->a_ops->writepage(page, wbc);
-	mapping_set_error(mapping, ret);
-	return ret;
-}
-
 static int f2fs_write_data_pages(struct address_space *mapping,
 			    struct writeback_control *wbc)
 {
@@ -572,7 +563,7 @@ static int f2fs_write_data_pages(struct address_space *mapping,
 
 	if (!S_ISDIR(inode->i_mode))
 		mutex_lock(&sbi->writepages);
-	ret = write_cache_pages(mapping, wbc, __f2fs_writepage, mapping);
+	ret = generic_writepages(mapping, wbc);
 	if (!S_ISDIR(inode->i_mode))
 		mutex_unlock(&sbi->writepages);
 	f2fs_submit_bio(sbi, DATA, (wbc->sync_mode == WB_SYNC_ALL));
@@ -698,11 +689,6 @@ static int f2fs_set_data_page_dirty(struct page *page)
 	return 0;
 }
 
-static sector_t f2fs_bmap(struct address_space *mapping, sector_t block)
-{
-	return generic_block_bmap(mapping, block, get_data_block_ro);
-}
-
 const struct address_space_operations f2fs_dblock_aops = {
 	.readpage	= f2fs_read_data_page,
 	.readpages	= f2fs_read_data_pages,
@@ -714,5 +700,4 @@ const struct address_space_operations f2fs_dblock_aops = {
 	.invalidatepage	= f2fs_invalidate_data_page,
 	.releasepage	= f2fs_release_data_page,
 	.direct_IO	= f2fs_direct_IO,
-	.bmap		= f2fs_bmap,
 };

@@ -214,6 +214,7 @@ retry:
 		goto retry;
 	}
 	new->ino = ino;
+	INIT_LIST_HEAD(&new->list);
 
 	/* add new_oentry into list which is sorted by inode number */
 	if (orphan) {
@@ -771,7 +772,7 @@ void init_orphan_info(struct f2fs_sb_info *sbi)
 	sbi->n_orphans = 0;
 }
 
-int __init create_checkpoint_caches(void)
+int create_checkpoint_caches(void)
 {
 	orphan_entry_slab = f2fs_kmem_cache_create("f2fs_orphan_entry",
 			sizeof(struct orphan_inode_entry), NULL);
