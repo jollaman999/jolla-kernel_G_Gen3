@@ -1086,7 +1086,7 @@ static int check_direct_IO(struct inode *inode, int rw,
 }
 
 static ssize_t f2fs_direct_IO(int rw, struct kiocb *iocb,
-		const struct iovec *iov, loff_t offset, unsigned long nr_segs)
+		struct iov_iter *iter, loff_t offset)
 {
 	struct file *file = iocb->ki_filp;
 	struct address_space *mapping = file->f_mapping;

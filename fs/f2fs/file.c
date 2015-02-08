@@ -91,6 +91,7 @@ out:
 
 static const struct vm_operations_struct f2fs_file_vm_ops = {
 	.fault		= filemap_fault,
+	.map_pages	= filemap_map_pages,
 	.page_mkwrite	= f2fs_vm_page_mkwrite,
 	.remap_pages	= generic_file_remap_pages,
 };
@@ -1133,10 +1134,10 @@ long f2fs_compat_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 const struct file_operations f2fs_file_operations = {
 	.llseek		= f2fs_llseek,
-	.read		= do_sync_read,
-	.write		= do_sync_write,
-	.aio_read	= generic_file_aio_read,
-	.aio_write	= generic_file_aio_write,
+	.read		= new_sync_read,
+	.write		= new_sync_write,
+	.read_iter	= generic_file_read_iter,
+	.write_iter	= generic_file_write_iter,
 	.open		= generic_file_open,
 	.release	= f2fs_release_file,
 	.mmap		= f2fs_file_mmap,
@@ -1147,5 +1148,5 @@ const struct file_operations f2fs_file_operations = {
 	.compat_ioctl	= f2fs_compat_ioctl,
 #endif
 	.splice_read	= generic_file_splice_read,
-	.splice_write	= generic_file_splice_write,
+	.splice_write	= iter_file_splice_write,
 };
