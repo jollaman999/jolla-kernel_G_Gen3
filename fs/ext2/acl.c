@@ -256,7 +256,7 @@ ext2_init_acl(struct inode *inode, struct inode *dir)
 			if (error)
 				goto cleanup;
 		}
-		error = __posix_acl_create(&acl, GFP_KERNEL, &inode->i_mode);
+		error = posix_acl_create(&acl, GFP_KERNEL, &inode->i_mode);
 		if (error < 0)
 			return error;
 		if (error > 0) {
