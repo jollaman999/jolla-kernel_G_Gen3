@@ -42,7 +42,7 @@ static int recover_dentry(struct page *ipage, struct inode *inode)
 {
 	struct f2fs_node *raw_node = (struct f2fs_node *)kmap(ipage);
 	struct f2fs_inode *raw_inode = &(raw_node->i);
-	struct qstr name;
+	struct dentry dent, parent;
 	struct f2fs_dir_entry *de;
 	struct page *page;
 	struct inode *dir;
@@ -57,15 +57,17 @@ static int recover_dentry(struct page *ipage, struct inode *inode)
 		goto out;
 	}
 
-	name.len = le32_to_cpu(raw_inode->i_namelen);
-	name.name = raw_inode->i_name;
+	parent.d_inode = dir;
+	dent.d_parent = &parent;
+	dent.d_name.len = le32_to_cpu(raw_inode->i_namelen);
+	dent.d_name.name = raw_inode->i_name;
 
-	de = f2fs_find_entry(dir, &name, &page);
+	de = f2fs_find_entry(dir, &dent.d_name, &page);
 	if (de) {
 		kunmap(page);
 		f2fs_put_page(page, 0);
 	} else {
-		__f2fs_add_link(dir, &name, inode);
+		err = f2fs_add_link(&dent, inode);
 	}
 	iput(dir);
 out:
@@ -149,7 +151,6 @@ static int find_fsync_dnodes(struct f2fs_sb_info *sbi, struct list_head *head)
 				goto out;
 			}
 
-			INIT_LIST_HEAD(&entry->list);
 			list_add_tail(&entry->list, head);
 			entry->blkaddr = blkaddr;
 		}
@@ -172,10 +173,9 @@ out:
 static void destroy_fsync_dnodes(struct f2fs_sb_info *sbi,
 					struct list_head *head)
 {
-	struct list_head *this;
-	struct fsync_inode_entry *entry;
-	list_for_each(this, head) {
-		entry = list_entry(this, struct fsync_inode_entry, list);
+	struct fsync_inode_entry *entry, *tmp;
+
+	list_for_each_entry_safe(entry, tmp, head, list) {
 		iput(entry->inode);
 		list_del(&entry->list);
 		kmem_cache_free(fsync_entry_slab, entry);

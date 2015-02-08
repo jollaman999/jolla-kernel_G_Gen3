@@ -211,11 +211,11 @@ struct dnode_of_data {
 static inline void set_new_dnode(struct dnode_of_data *dn, struct inode *inode,
 		struct page *ipage, struct page *npage, nid_t nid)
 {
+	memset(dn, 0, sizeof(*dn));
 	dn->inode = inode;
 	dn->inode_page = ipage;
 	dn->node_page = npage;
 	dn->nid = nid;
-	dn->inode_page_locked = 0;
 }
 
 /*
@@ -867,22 +867,18 @@ struct f2fs_dir_entry *f2fs_parent_dir(struct inode *, struct page **);
 ino_t f2fs_inode_by_name(struct inode *, struct qstr *);
 void f2fs_set_link(struct inode *, struct f2fs_dir_entry *,
 				struct page *, struct inode *);
-void init_dent_inode(const struct qstr *, struct page *);
-int __f2fs_add_link(struct inode *, const struct qstr *, struct inode *);
+void init_dent_inode(struct dentry *, struct page *);
+int f2fs_add_link(struct dentry *, struct inode *);
 void f2fs_delete_entry(struct f2fs_dir_entry *, struct page *, struct inode *);
 int f2fs_make_empty(struct inode *, struct inode *);
 bool f2fs_empty_dir(struct inode *);
-
-static inline int f2fs_add_link(struct dentry *dentry, struct inode *inode)
-{
-	return __f2fs_add_link(dentry->d_parent->d_inode, &dentry->d_name,
-				inode);
-}
 
 /*
  * super.c
  */
 int f2fs_sync_fs(struct super_block *, int);
+extern __printf(3, 4)
+void f2fs_msg(struct super_block *, const char *, const char *, ...);
 
 /*
  * hash.c
@@ -900,7 +896,7 @@ void get_node_info(struct f2fs_sb_info *, nid_t, struct node_info *);
 int get_dnode_of_data(struct dnode_of_data *, pgoff_t, int);
 int truncate_inode_blocks(struct inode *, pgoff_t);
 int remove_inode_page(struct inode *);
-int new_inode_page(struct inode *, const struct qstr *);
+int new_inode_page(struct inode *, struct dentry *);
 struct page *new_node_page(struct dnode_of_data *, unsigned int);
 void ra_node_page(struct f2fs_sb_info *, nid_t);
 struct page *get_node_page(struct f2fs_sb_info *, pgoff_t);
@@ -918,7 +914,7 @@ int restore_node_summary(struct f2fs_sb_info *, unsigned int,
 void flush_nat_entries(struct f2fs_sb_info *);
 int build_node_manager(struct f2fs_sb_info *);
 void destroy_node_manager(struct f2fs_sb_info *);
-int create_node_manager_caches(void);
+int __init create_node_manager_caches(void);
 void destroy_node_manager_caches(void);
 
 /*
@@ -970,7 +966,7 @@ void sync_dirty_dir_inodes(struct f2fs_sb_info *);
 void block_operations(struct f2fs_sb_info *);
 void write_checkpoint(struct f2fs_sb_info *, bool, bool);
 void init_orphan_info(struct f2fs_sb_info *);
-int create_checkpoint_caches(void);
+int __init create_checkpoint_caches(void);
 void destroy_checkpoint_caches(void);
 
 /*
@@ -990,9 +986,9 @@ int do_write_data_page(struct page *);
 int start_gc_thread(struct f2fs_sb_info *);
 void stop_gc_thread(struct f2fs_sb_info *);
 block_t start_bidx_of_node(unsigned int);
-int f2fs_gc(struct f2fs_sb_info *, int);
+int f2fs_gc(struct f2fs_sb_info *);
 void build_gc_manager(struct f2fs_sb_info *);
-int create_gc_caches(void);
+int __init create_gc_caches(void);
 void destroy_gc_caches(void);
 
 /*
@@ -1064,7 +1060,8 @@ struct f2fs_stat_info {
 
 int f2fs_build_stats(struct f2fs_sb_info *);
 void f2fs_destroy_stats(struct f2fs_sb_info *);
-void destroy_root_stats(void);
+void __init f2fs_create_root_stats(void);
+void f2fs_destroy_root_stats(void);
 #else
 #define stat_inc_call_count(si)
 #define stat_inc_seg_count(si, type)
@@ -1074,7 +1071,8 @@ void destroy_root_stats(void);
 
 static inline int f2fs_build_stats(struct f2fs_sb_info *sbi) { return 0; }
 static inline void f2fs_destroy_stats(struct f2fs_sb_info *sbi) { }
-static inline void destroy_root_stats(void) { }
+static inline void __init f2fs_create_root_stats(void) { }
+static inline void f2fs_destroy_root_stats(void) { }
 #endif
 
 extern const struct file_operations f2fs_dir_operations;
