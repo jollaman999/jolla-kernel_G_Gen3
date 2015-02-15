@@ -430,13 +430,7 @@ static void __cpuinit intelli_plug_resume(struct power_suspend *handler)
 static void __cpuinit intelli_plug_resume(struct early_suspend *handler)
 #endif
 {
-	// intelli_plug: Force intelli_plug working when playing music while screen off
-	// - jollaman999 -
-#ifdef CONFIG_SND_SOC_WCD9310
-	if (intelli_plug_active && !wcd9310_is_playing) {
-#else
 	if (intelli_plug_active) {
-#endif
 		int cpu;
 
 		mutex_lock(&intelli_plug_mutex);
