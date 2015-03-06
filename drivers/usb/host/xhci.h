@@ -1513,6 +1513,7 @@ struct xhci_hcd {
 #define XHCI_PLAT		(1 << 16)
 #define XHCI_SLOW_SUSPEND	(1 << 17)
 #define XHCI_SPURIOUS_WAKEUP	(1 << 18)
+#define XHCI_PME_STUCK_QUIRK	(1 << 20)
 /*
  * In Synopsis DWC3 controller, PORTSC register access involves multiple clock
  * domains. When the software does a PORTSC write, handshakes are needed
