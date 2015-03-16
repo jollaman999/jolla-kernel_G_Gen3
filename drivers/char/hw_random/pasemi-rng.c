@@ -132,7 +132,7 @@ static int __devexit rng_remove(struct platform_device *dev)
 	return 0;
 }
 
-static struct of_device_id rng_match[] = {
+static const struct of_device_id rng_match[] = {
 	{ .compatible      = "1682m-rng", },
 	{ .compatible      = "pasemi,pwrficient-rng", },
 	{ },
