@@ -706,7 +706,7 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 
 	enabled = 1;
 	table_loaded = false;
-	check_temp_workq=alloc_workqueue("dynamic_thermal", WQ_UNBOUND | WQ_RESCUER, 1);
+	check_temp_workq=alloc_workqueue("msm_thermal", WQ_UNBOUND | WQ_RESCUER, 1);
 	if (!check_temp_workq)
 		BUG_ON(ENOMEM);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
@@ -716,7 +716,7 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 	register_early_suspend(&msm_thermal_early_suspend_handler);
 #endif
 
-	msm_thermal_kobject = kobject_create_and_add("dynamic_thermal", kernel_kobj);
+	msm_thermal_kobject = kobject_create_and_add("msm_thermal", kernel_kobj);
 	if (msm_thermal_kobject) {
 		rc = sysfs_create_group(msm_thermal_kobject, &msm_thermal_attr_group);
 		if (rc) {
@@ -818,7 +818,7 @@ static struct of_device_id msm_thermal_match_table[] = {
 static struct platform_driver msm_thermal_device_driver = {
 	.probe = msm_thermal_dev_probe,
 	.driver = {
-		.name = "dynamic-thermal",
+		.name = "msm-thermal",
 		.owner = THIS_MODULE,
 		.of_match_table = msm_thermal_match_table,
 	},
