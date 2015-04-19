@@ -668,7 +668,7 @@ config CRYPTO_ANUBIS
 
 config CRYPTO_ARC4
 	tristate "ARC4 cipher algorithm"
-	select CRYPTO_BLKCIPHER
+	select CRYPTO_ALGAPI
 	help
 	  ARC4 cipher algorithm.
 
