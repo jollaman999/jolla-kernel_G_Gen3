@@ -34,6 +34,7 @@
 
 #ifdef CONFIG_LGE_PM_LOW_BATT_CHG
 #include <mach/board_lge.h>
+#endif
 
 // Dynamic thermal control - By jollaman999
 #ifdef CONFIG_DYNAMIC_THERMAL_CONTROL
