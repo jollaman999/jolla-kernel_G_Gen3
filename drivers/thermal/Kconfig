@@ -73,16 +73,33 @@ config THERMAL_PM8XXX
 	  shifting over temperature shutdown control of the PMIC from hardware
 	  to software.
 
-config THERMAL_MONITOR
-	bool "Monitor thermal state and limit CPU Frequency"
+choice
+	prompt "MSM Thermal Monitor Types"
+	default DYNAMIC_THERMAL_CONTROL
+
+config DYNAMIC_THERMAL_CONTROL
+	bool "Dynamic thermal control"
 	depends on THERMAL_TSENS8960 || THERMAL_TSENS8974
 	depends on CPU_FREQ_MSM
-	default n
 	help
 	  This enables thermal monitoring capability in the kernel in the
 	  absence of a system wide thermal monitoring entity or until such an
 	  entity starts running in the userspace. Monitors TSENS temperature
 	  and limits the max frequency of the cores.
+	  Also when max cpu frequency changed, it will adjust thermal settings
+	  dynamically.
+
+config THERMAL_MONITOR
+	bool "Monitor thermal state and limit CPU Frequency"
+	depends on THERMAL_TSENS8960 || THERMAL_TSENS8974
+	depends on CPU_FREQ_MSM
+	help
+	  This enables thermal monitoring capability in the kernel in the
+	  absence of a system wide thermal monitoring entity or until such an
+	  entity starts running in the userspace. Monitors TSENS temperature
+	  and limits the max frequency of the cores.
+
+endchoice
 
 config SPEAR_THERMAL
 	bool "SPEAr thermal sensor driver"

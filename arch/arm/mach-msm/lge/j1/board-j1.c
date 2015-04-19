@@ -2077,6 +2077,25 @@ static struct platform_device msm_tsens_device = {
 	.id = -1,
 };
 
+#ifdef CONFIG_DYNAMIC_THERMAL_CONTROL
+static struct msm_thermal_data msm_thermal_pdata = {
+	.sensor_id = 7,
+	.poll_ms = 1200,
+	.shutdown_temp = 90,
+
+	.allowed_max_high = 68,
+	.allowed_max_low = 56,
+	.allowed_max_freq = 918000,
+
+	.allowed_mid_high = 58,
+	.allowed_mid_low = 54,
+	.allowed_mid_freq = 1026000,
+
+	.allowed_low_high = 56,
+	.allowed_low_low = 50,
+	.allowed_low_freq = 1134000,
+ };
+#else /* CONFIG_DYNAMIC_THERMAL_CONTROL */
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 7,
 #ifdef CONFIG_MACH_LGE
@@ -2089,6 +2108,7 @@ static struct msm_thermal_data msm_thermal_pdata = {
 	.temp_hysteresis_degC = 10,
 	.freq_step = 2,
 };
+#endif /* CONFIG_DYNAMIC_THERMAL_CONTROL */
 
 #define MSM_SHARED_RAM_PHYS 0x80000000
 static void __init apq8064_map_io(void)
