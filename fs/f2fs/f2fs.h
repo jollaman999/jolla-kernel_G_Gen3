@@ -230,6 +230,13 @@ static inline bool __has_cursum_space(struct f2fs_summary_block *sum, int size,
 #define F2FS_IOC_RELEASE_VOLATILE_WRITE	_IO(F2FS_IOCTL_MAGIC, 4)
 #define F2FS_IOC_ABORT_VOLATILE_WRITE	_IO(F2FS_IOCTL_MAGIC, 5)
 
+#define F2FS_IOC_SET_ENCRYPTION_POLICY					\
+		_IOR('f', 19, struct f2fs_encryption_policy)
+#define F2FS_IOC_GET_ENCRYPTION_PWSALT					\
+		_IOW('f', 20, __u8[16])
+#define F2FS_IOC_GET_ENCRYPTION_POLICY					\
+		_IOW('f', 21, struct f2fs_encryption_policy)
+
 /*
  * should be same as XFS_IOC_GOINGDOWN.
  * Flags for going down operation used by FS_IOC_GOINGDOWN
@@ -367,6 +374,8 @@ struct f2fs_map_blocks {
 #define F2FS_ENCRYPTION_MODE_AES_256_GCM	2
 #define F2FS_ENCRYPTION_MODE_AES_256_CBC	3
 #define F2FS_ENCRYPTION_MODE_AES_256_CTS	4
+
+#include "f2fs_crypto.h"
 
 #define DEF_DIR_LEVEL		0
 
