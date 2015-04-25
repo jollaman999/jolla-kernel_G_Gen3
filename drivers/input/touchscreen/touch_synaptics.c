@@ -36,14 +36,6 @@
 #define G_ONLY
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#ifdef CONFIG_TOUCHSCREEN_SWEEP2WAKE
-#include <linux/input/sweep2wake.h>
-#endif
-#ifdef CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE
-#include <linux/input/doubletap2wake.h>
-#endif
-#endif
 
 #include <linux/regulator/machine.h>
 
@@ -992,22 +984,8 @@ int synaptics_ts_init(struct i2c_client* client, struct touch_fw_info* fw_info)
 
 int synaptics_ts_power(struct i2c_client* client, int power_ctrl)
 {
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
-	bool prevent_sleep = false;
-#endif
-#endif
 	struct synaptics_ts_data* ts =
 			(struct synaptics_ts_data*)get_touch_handle(client);
-
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
-	prevent_sleep = (s2w_switch == 1);
-#endif
-#if defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE)
-	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
-#endif
-#endif
 
 	if (touch_debug_mask & DEBUG_TRACE)
 		TOUCH_DEBUG_MSG("\n");
@@ -1057,17 +1035,11 @@ int synaptics_ts_power(struct i2c_client* client, int power_ctrl)
 #endif
 		break;
 	case POWER_SLEEP:
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-		if (!prevent_sleep) {
-#endif
-			if (unlikely(touch_i2c_write_byte(client, DEVICE_CONTROL_REG,
-					DEVICE_CONTROL_SLEEP | DEVICE_CONTROL_CONFIGURED) < 0)) {
-				TOUCH_ERR_MSG("DEVICE_CONTROL_REG write fail\n");
-				return -EIO;
-			}
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
+		if (unlikely(touch_i2c_write_byte(client, DEVICE_CONTROL_REG,
+				DEVICE_CONTROL_SLEEP | DEVICE_CONTROL_CONFIGURED) < 0)) {
+			TOUCH_ERR_MSG("DEVICE_CONTROL_REG write fail\n");
+			return -EIO;
 		}
-#endif
 		break;
 	case POWER_WAKE:
 		if (unlikely(touch_i2c_write_byte(client, DEVICE_CONTROL_REG,
