@@ -2649,6 +2649,12 @@ config FORCE_FAST_CHARGE
 	  A simple sysfs interface to force adapters that
 	  are detected as USB to charge as AC.
 
+config CPU_OVERCLOCK
+	bool "Enable Krait 8064 CPU overclock"
+	default n
+	help
+	  Overclock support for Krait 8064 CPU.
+
 endif
 config LGE_IRRC
 	tristate "LGE_IRRC"
