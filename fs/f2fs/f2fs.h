@@ -258,6 +258,25 @@ static inline bool __has_cursum_space(struct f2fs_summary_block *sum, int size,
  * For INODE and NODE manager
  */
 /* for directory operations */
+struct f2fs_str {
+	unsigned char *name;
+	u32 len;
+};
+
+struct f2fs_filename {
+	const struct qstr *usr_fname;
+	struct f2fs_str disk_name;
+	f2fs_hash_t hash;
+#ifdef CONFIG_F2FS_FS_ENCRYPTION
+	struct f2fs_str crypto_buf;
+#endif
+};
+
+#define FSTR_INIT(n, l)		{ .name = n, .len = l }
+#define FSTR_TO_QSTR(f)		QSTR_INIT((f)->name, (f)->len)
+#define fname_name(p)		((p)->disk_name.name)
+#define fname_len(p)		((p)->disk_name.len)
+
 struct f2fs_dentry_ptr {
 	const void *bitmap;
 	struct f2fs_dir_entry *dentry;
