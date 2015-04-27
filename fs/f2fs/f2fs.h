@@ -278,15 +278,18 @@ struct f2fs_filename {
 #define fname_len(p)		((p)->disk_name.len)
 
 struct f2fs_dentry_ptr {
+	struct inode *inode;
 	const void *bitmap;
 	struct f2fs_dir_entry *dentry;
 	__u8 (*filename)[F2FS_SLOT_LEN];
 	int max;
 };
 
-static inline void make_dentry_ptr(struct f2fs_dentry_ptr *d,
-					void *src, int type)
+static inline void make_dentry_ptr(struct inode *inode,
+		struct f2fs_dentry_ptr *d, void *src, int type)
 {
+	d->inode = inode;
+
 	if (type == 1) {
 		struct f2fs_dentry_block *t = (struct f2fs_dentry_block *)src;
 		d->max = NR_DENTRY_IN_BLOCK;
@@ -1590,7 +1593,8 @@ void set_de_type(struct f2fs_dir_entry *, umode_t);
 struct f2fs_dir_entry *find_target_dentry(struct qstr *, int *,
 			struct f2fs_dentry_ptr *);
 bool f2fs_fill_dentries(struct file *, void *, filldir_t,
-			struct f2fs_dentry_ptr *, unsigned int, unsigned int);
+			struct f2fs_dentry_ptr *, unsigned int, unsigned int,
+			struct f2fs_str *);
 void do_make_empty_dir(struct inode *, struct inode *,
 			struct f2fs_dentry_ptr *);
 struct page *init_inode_metadata(struct inode *, struct inode *,
