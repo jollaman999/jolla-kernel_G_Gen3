@@ -2655,6 +2655,12 @@ config CPU_OVERCLOCK
 	help
 	  Overclock support for Krait 8064 CPU.
 
+config GPU_OVERCLOCK
+	bool "Enable Adreno 200 GPU overclock"
+	default n
+	help
+	  Overclock support for Adreno 200 GPU.
+
 endif
 config LGE_IRRC
 	tristate "LGE_IRRC"
