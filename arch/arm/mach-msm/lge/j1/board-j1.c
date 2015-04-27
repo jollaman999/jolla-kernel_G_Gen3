@@ -2094,6 +2094,8 @@ static struct msm_thermal_data msm_thermal_pdata = {
 	.allowed_low_high = 56,
 	.allowed_low_low = 50,
 	.allowed_low_freq = 1134000,
+
+	.dynamic_thermal_control = 1,
  };
 #else /* CONFIG_DYNAMIC_THERMAL_CONTROL */
 static struct msm_thermal_data msm_thermal_pdata = {

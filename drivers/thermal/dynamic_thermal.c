@@ -252,7 +252,7 @@ static void __cpuinit check_temp(struct work_struct *work)
 	if (dynamic_thermal_throttled == 0)
 		pre_throttled_max = cpu_policy->max;
 
-		if(msm_thermal_info.dynamic_thermal_control
+	if(msm_thermal_info.dynamic_thermal_control
 	   && cpufreq_max_changed_by_user
 	   && !cpufreq_max_changed_by_msm_thermal)
 		dynamic_thermal();
@@ -712,7 +712,7 @@ int __devinit msm_thermal_init(struct msm_thermal_data *pdata)
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	queue_delayed_work(check_temp_workq, &check_temp_work, 0);
 
-	#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_EARLYSUSPEND
 	register_early_suspend(&msm_thermal_early_suspend_handler);
 #endif
 
@@ -751,7 +751,7 @@ static int __devinit msm_thermal_dev_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail;
 
-		key = "qcom,dynamic_thermal_control";
+	key = "qcom,dynamic_thermal_control";
 	ret = of_property_read_u32(node, key, &data.dynamic_thermal_control);
 	if (ret)
 		goto fail;
