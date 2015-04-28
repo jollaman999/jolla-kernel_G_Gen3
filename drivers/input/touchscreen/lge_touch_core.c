@@ -778,14 +778,16 @@ int touch_i2c_read(struct i2c_client *client, u8 reg, int len, u8 *buf)
 	};
 
 	for (retry = 0; retry <= LGETOUCH_I2C_RETRY; retry++) {
-		if (i2c_transfer(client->adapter, msgs, 2) == 2)
-			break;
 		if (retry == LGETOUCH_I2C_RETRY) {
 			if (printk_ratelimit())
 				TOUCH_ERR_MSG("transfer error\n");
 			return -EIO;
-		} else
+		}
+
+		if (i2c_transfer(client->adapter, msgs, 2) < 0)
 			msleep(10);
+		else
+			break;
 	}
 
 	return 0;
