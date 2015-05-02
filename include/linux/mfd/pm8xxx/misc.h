@@ -233,6 +233,15 @@ void pm8921_turn_on_19p2mhz_clk_ext(void);
 int pm8921_usb_pwr_enable(int enable);
 /*LGE_CHANGE_E 2012-08-11 jungwoo.yun@lge.com */
 
+/**
+ * pm8xxx_read_register - Read a PMIC register
+ * @addr: PMIC register address
+ * @value: Output parameter which gets the value of the register read.
+ *
+ * RETURNS: an appropriate -ERRNO error value on error, or zero for success.
+ */
+int pm8xxx_read_register(u16 addr, u8 *value);
+
 #else
 
 static inline int pm8xxx_reset_pwr_off(int reset)
