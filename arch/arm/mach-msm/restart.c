@@ -325,6 +325,8 @@ static void msm_restart_prepare(const char *cmd)
 			else {
 				__raw_writel(0x77665501, restart_reason);
 			}
+		} else {
+			__raw_writel(0x77665501, restart_reason);
 		}
 	}
 #else
@@ -340,6 +342,8 @@ static void msm_restart_prepare(const char *cmd)
 		} else {
 			__raw_writel(0x77665501, restart_reason);
 		}
+	} else {
+		__raw_writel(0x77665501, restart_reason);
 	}
 #endif // CONFIG_LGE_HANDLE_PANIC
 
