@@ -73,6 +73,7 @@
  */
 #define LGE_ERROR_HANDLE_MAGIC_ADDR	0x18
 void *lge_error_handle_cookie_addr;
+static int subsys_crash_magic = 0;
 #endif // CONFIG_LGE_HANDLE_PANIC
 
 static int restart_mode;
@@ -132,6 +133,9 @@ static int dload_set(const char *val, struct kernel_param *kp)
 	}
 
 	set_dload_mode(download_mode);
+#ifdef CONFIG_LGE_HANDLE_PANIC
+	subsys_crash_magic = 0;
+#endif
 
 	return 0;
 }
@@ -218,7 +222,6 @@ static irqreturn_t resout_irq_handler(int irq, void *dev_id)
 }
 
 #ifdef CONFIG_LGE_HANDLE_PANIC
-static int subsys_crash_magic = 0;
 #define SUBSYS_NAME_MAX_LENGTH	40
 
 int lge_get_magic_for_subsystem(void)

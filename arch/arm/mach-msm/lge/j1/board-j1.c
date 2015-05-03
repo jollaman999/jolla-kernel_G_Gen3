@@ -770,6 +770,7 @@ static void __init apq8064_reserve(void)
 		}
 #endif
 	}
+	lge_reserve();
 }
 
 static void __init apq8064_early_reserve(void)
@@ -3900,12 +3901,8 @@ static void __init apq8064_common_init(void)
 		apq8064_init_dsps();
 		platform_device_register(&msm_8960_riva);
 	}
-#ifdef CONFIG_ANDROID_RAM_CONSOLE
 	lge_add_ramconsole_devices();
-#endif
-#ifdef CONFIG_LGE_HANDLE_PANIC
 	lge_add_panic_handler_devices();
-#endif
 #ifdef CONFIG_LGE_BOOT_TIME_CHECK
 	lge_add_boot_time_checker();
 #endif
