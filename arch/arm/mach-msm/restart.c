@@ -307,6 +307,8 @@ static void msm_restart_prepare(const char *cmd)
 	      	 	} else if (!strncmp(cmd, "--bnr_recovery", 14)) {
 	           		__raw_writel(0x77665555, restart_reason);
 				printk("--bnr_recovery\n");
+			} else if (!strcmp(cmd, "rtc")) {
+				__raw_writel(0x77665503, restart_reason);
 			} else if (!strncmp(cmd, "oem-", 4)) {
 				unsigned long code;
 				code = simple_strtoul(cmd+4, NULL, 16) & 0xff;
@@ -335,6 +337,8 @@ static void msm_restart_prepare(const char *cmd)
 			__raw_writel(0x77665500, restart_reason);
 		} else if (!strncmp(cmd, "recovery", 8)) {
 			__raw_writel(0x77665502, restart_reason);
+		} else if (!strcmp(cmd, "rtc")) {
+			__raw_writel(0x77665503, restart_reason);
 		} else if (!strncmp(cmd, "oem-", 4)) {
 			unsigned long code;
 			code = simple_strtoul(cmd + 4, NULL, 16) & 0xff;
