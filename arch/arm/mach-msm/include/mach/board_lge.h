@@ -19,12 +19,16 @@
 #ifndef __ASM_ARCH_MSM_BOARD_LGE_H
 #define __ASM_ARCH_MSM_BOARD_LGE_H
 
+#ifdef CONFIG_ANDROID_PERSISTENT_RAM
+#define LGE_PERSISTENT_RAM_SIZE	(SZ_1M)
+#endif
+
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 #define LGE_RAM_CONSOLE_SIZE	(124*SZ_1K * 2)
 #endif
 
 #ifdef CONFIG_LGE_HANDLE_PANIC
-#define LGE_CRASH_LOG_SIZE	(4*SZ_1K)
+#define LGE_CRASH_LOG_SIZE	(4*SZ_1K + SZ_1K)
 #endif
 
 typedef enum {
@@ -149,14 +153,35 @@ enum lge_boot_cable_type {
     LGE_BOOT_NO_INIT_CABLE,
 };
 
+void __init lge_reserve(void);
+
+#ifdef CONFIG_ANDROID_PERSISTENT_RAM
+void __init lge_add_persistent_ram(void);
+#else
+static inline void __init lge_add_persistent_ram(void)
+{
+	/* empty */
+}
+#endif
+
 #ifdef CONFIG_ANDROID_RAM_CONSOLE
 void __init lge_add_ramconsole_devices(void);
+#else
+static inline void __init lge_add_ramconsole_devices(void)
+{
+	/* empty */
+}
 #endif
 
 #ifdef CONFIG_LGE_HANDLE_PANIC
 void __init lge_add_panic_handler_devices(void);
 int lge_get_magic_for_subsystem(void);
 void lge_set_magic_for_subsystem(const char *subsys_name);
+#else
+static inline void __init lge_add_panic_handler_devices(void)
+{
+	/* empty */
+}
 #endif
 
 #ifdef CONFIG_LGE_QFPROM_INTERFACE
