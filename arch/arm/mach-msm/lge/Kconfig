@@ -9,13 +9,11 @@ endmenu
 menu "LGE Specific Patches"
 
 config LGE_HANDLE_PANIC
-	tristate "Support LGE Kernel Panic Handler"
-	depends on !S390 && !UML && HAVE_MEMBLOCK
-	select ANDROID_PERSISTENT_RAM
-	default n
-	depends on MACH_LGE
-	help
-	LGE Error Handler
+    tristate "Support LGE Kernel Panic Handler"
+    default n
+    depends on MACH_LGE
+    help
+      LGE Error Handler
 
 config LGE_QFPROM_INTERFACE
 	bool "Support qfprom interface"
@@ -74,7 +72,6 @@ config LGE_ECO_MODE
     depends on MACH_LGE
     help
       LGE ECO mode support
-
 config LGE_CRASH_HANDLER
 	tristate "Support LGE Crash Handler"
 	depends on !S390 && !UML && HAVE_MEMBLOCK

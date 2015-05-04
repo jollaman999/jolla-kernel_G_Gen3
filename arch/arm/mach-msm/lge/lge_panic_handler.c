@@ -22,7 +22,6 @@
 #include <linux/io.h>
 #include <linux/module.h>
 #include <linux/persistent_ram.h>
-#include <linux/persistent_ram.h>
 #include <asm/setup.h>
 #include <mach/board_lge.h>
 
