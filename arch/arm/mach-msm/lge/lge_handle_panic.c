@@ -22,7 +22,6 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/module.h>
-#include <linux/persistent_ram.h>
 #include <asm/setup.h>
 #include <mach/board_lge.h>
 
@@ -37,11 +36,10 @@
 
 #define PANIC_HANDLER_NAME "panic-handler"
 #define PANIC_DUMP_CONSOLE 0
-#define PANIC_MAGIC_KEY		0x12345678
-#define NORMAL_MAGIC_KEY	0x4E4F524D
+#define PANIC_MAGIC_KEY	0x12345678
 #define CRASH_ARM9		0x87654321
-#define CRASH_REBOOT		0x618E1000
-#define CRASH_HANDLER_ENABLE	0x63680001
+#define CRASH_REBOOT	0x618E1000
+#define CRASH_HANDLER_ENABLE 0x63680001
 
 struct crash_log_dump {
 	unsigned int magic_key;
@@ -164,8 +162,8 @@ module_param_call(gen_hw_reset, gen_hw_reset, param_get_bool,
 
 void set_crash_store_enable(void)
 {
-	if (crash_dump_log->magic_key == NORMAL_MAGIC_KEY)
-		crash_store_flag = 1;
+	crash_store_flag = 1;
+
 	return;
 }
 
@@ -358,7 +356,8 @@ static struct notifier_block panic_handler_block = {
 
 static int __init lge_panic_handler_probe(struct platform_device *pdev)
 {
-	struct persistent_ram_zone *prz;
+	struct resource *res = pdev->resource;
+	size_t start;
 	size_t buffer_size;
 	void *buffer;
 	int ret = 0;
@@ -368,21 +367,32 @@ static int __init lge_panic_handler_probe(struct platform_device *pdev)
  * taehung.kim@lge.com 2011-10-13
  */
 	void *ctx_buf;
+	size_t ctx_start;
 #endif
 #if defined(CONFIG_LGE_HIDDEN_RESET)
 	void *hreset_flag_buf;
 	size_t hreset_start;
 #endif
-	prz = persistent_ram_init_ringbuffer(&pdev->dev, false);
-	if (IS_ERR(prz))
-		return PTR_ERR(prz);
+	if (res == NULL || pdev->num_resources != 1 ||
+			!(res->flags & IORESOURCE_MEM)) {
+		printk(KERN_ERR "lge_panic_handler: invalid resource, %p %d flags "
+				"%lx\n", res, pdev->num_resources, res ? res->flags : 0);
+		return -ENXIO;
+	}
 
-	buffer_size = prz->buffer_size - SZ_1K;
-	buffer = (void *)prz->buffer;;
+	buffer_size = res->end - res->start + 1;
+	start = res->start;
+	printk(KERN_INFO "lge_panic_handler: got buffer at %zx, size %zx\n",
+			start, buffer_size);
+	buffer = ioremap(res->start, buffer_size);
+	if (buffer == NULL) {
+		printk(KERN_ERR "lge_panic_handler: failed to map memory\n");
+		return -ENOMEM;
+	}
 
 	crash_dump_log = (struct crash_log_dump *)buffer;
 	memset(crash_dump_log, 0, buffer_size);
-	crash_dump_log->magic_key = NORMAL_MAGIC_KEY;
+	crash_dump_log->magic_key = 0;
 	crash_dump_log->size = 0;
 	crash_buf_size = buffer_size - offsetof(struct crash_log_dump, buffer);
 
@@ -397,7 +407,12 @@ static int __init lge_panic_handler_probe(struct platform_device *pdev)
  * save cpu and mmu registers to support simulation when debugging
  * taehung.kim@lge.com 2011-10-13
  */
-	ctx_buf = (void *)(buffer + buffer_size);
+	ctx_start = res->end + 1;
+	ctx_buf = ioremap(ctx_start,1024);
+	if (ctx_buf == NULL) {
+		printk(KERN_ERR "cpu crash ctx buffer: failed to map memory\n");
+		return -ENOMEM;
+	}
 	cpu_crash_ctx = (unsigned long *)ctx_buf;
 #endif
 #if defined(CONFIG_LGE_HIDDEN_RESET)
