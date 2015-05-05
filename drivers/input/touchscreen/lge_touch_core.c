@@ -3996,6 +3996,9 @@ static void touch_early_suspend(struct early_suspend *h)
 
 		touch_power_cntl(ts, ts->pdata->role->suspend_pwr);
 	}
+
+	/* Disable hardware keys */
+	atomic_set(&ts->keypad_enable, 0);
 }
 
 static void touch_late_resume(struct early_suspend *h)
@@ -4047,6 +4050,9 @@ static void touch_late_resume(struct early_suspend *h)
 		else
 			queue_delayed_work(touch_wq, &ts->work_init, 0);
 	}
+
+	/* Enable hardware keys */
+	atomic_set(&ts->keypad_enable, 1);
 }
 #endif
 
