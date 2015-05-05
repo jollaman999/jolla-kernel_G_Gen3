@@ -39,9 +39,8 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-
-
 /*
+ *
  * Airgo Networks, Inc proprietary. All rights reserved.
  * This file limProcessDisassocFrame.cc contains the code
  * for processing Disassocation Frame.
@@ -94,7 +93,9 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
     tpSirMacMgmtHdr    pHdr;
     tpDphHashNode      pStaDs;
     tLimMlmDisassocInd mlmDisassocInd;
-
+#ifdef WLAN_FEATURE_11W
+    tANI_U32            frameLen;
+#endif
 
     pHdr = WDA_GET_RX_MAC_HEADER(pRxPacketInfo);
     pBody = WDA_GET_RX_MPDU_DATA(pRxPacketInfo);
@@ -105,7 +106,7 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
         // Received Disassoc frame from a BC/MC address
         // Log error and ignore it
         PELOG1(limLog(pMac, LOG1,
-               FL("received Disassoc frame from a BC/MC address"));)
+               FL("received Disassoc frame from a BC/MC address\n"));)
 
         return;
     }
@@ -115,16 +116,32 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
         // Received Disassoc frame for a MC address
         // Log error and ignore it
         PELOG1(limLog(pMac, LOG1,
-               FL("received Disassoc frame for a MC address"));)
+               FL("received Disassoc frame for a MC address\n"));)
 
         return;
     }
+
+#ifdef WLAN_FEATURE_11W
+    /* PMF: If this session is a PMF session, then ensure that this frame was protected */
+    if(psessionEntry->limRmfEnabled  && (WDA_GET_RX_DPU_FEEDBACK(pRxPacketInfo) & DPU_FEEDBACK_UNPROTECTED_ERROR))
+    {
+        PELOGE(limLog(pMac, LOGE, FL("received an unprotected disassoc from AP"));)
+        // If the frame received is unprotected, forward it to the supplicant to initiate
+        // an SA query
+        frameLen = WDA_GET_RX_PAYLOAD_LEN(pRxPacketInfo);
+        //send the unprotected frame indication to SME
+        limSendSmeUnprotectedMgmtFrameInd( pMac, pHdr->fc.subType,
+                                           (tANI_U8*)pHdr, (frameLen + sizeof(tSirMacMgmtHdr)),
+                                           psessionEntry->smeSessionId, psessionEntry);
+        return;
+    }
+#endif
 
     // Get reasonCode from Disassociation frame body
     reasonCode = sirReadU16(pBody);
 
     PELOG2(limLog(pMac, LOG2,
-        FL("Received Disassoc frame (mlm state %d sme state %d), with reason code %d from "MAC_ADDRESS_STR),
+        FL("Received Disassoc frame (mlm state %d sme state %d), with reason code %d from "MAC_ADDRESS_STR), 
         psessionEntry->limMlmState, psessionEntry->limSmeState, reasonCode, MAC_ADDR_ARRAY(pHdr->sa));)
 
     /**
@@ -149,8 +166,8 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
 
     if (limCheckDisassocDeauthAckPending(pMac, (tANI_U8*)pHdr->sa))
     {
-        PELOGW(limLog(pMac, LOGW,
-                    FL("Ignore the DisAssoc received, while waiting for ack of disassoc/deauth"));)
+        PELOGW(limLog(pMac, LOGE, 
+                    FL("Ignore the DisAssoc received, while waiting for ack of disassoc/deauth\n"));)
         limCleanUpDisassocDeauthReq(pMac,(tANI_U8*)pHdr->sa, 1);
         return;
     }
@@ -163,14 +180,14 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
         *   drop/ignore the DisAssoc received
         */
         if (!IS_REASSOC_BSSID(pMac,pHdr->sa,psessionEntry)) {
-            PELOGW(limLog(pMac, LOGW, FL("Ignore the DisAssoc received, while Processing ReAssoc with different/unknown AP"));)
+            PELOGW(limLog(pMac, LOGW, FL("Ignore the DisAssoc received, while Processing ReAssoc with different/unknown AP\n"));)
             return;
         }
         /** If the Disassoc is received from the new AP to which we tried to ReAssociate
          *  Drop ReAssoc and Restore the Previous context( current connected AP).
          */
         if (!IS_CURRENT_BSSID(pMac, pHdr->sa,psessionEntry)) {
-            PELOGW(limLog(pMac, LOGW, FL("received Disassoc from the New AP to which ReAssoc is sent "));)
+            PELOGW(limLog(pMac, LOGW, FL("received Disassoc from the New AP to which ReAssoc is sent \n"));)
             limRestorePreReassocState(pMac,
                                   eSIR_SME_REASSOC_REFUSED, reasonCode,psessionEntry);
             return;
@@ -196,7 +213,7 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
             default:
                 // Invalid reasonCode in received Disassociation frame
                 PELOG1(limLog(pMac, LOG1,
-                       FL("received Disassoc frame with invalid reasonCode %d from "),
+                       FL("received Disassoc frame with invalid reasonCode %d from \n"),
                        reasonCode);
                 limPrintMacAddr(pMac, pHdr->sa, LOG1);)
                 break;
@@ -221,10 +238,10 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
             case eSIR_MAC_GR_KEY_UPDATE_TIMEOUT_REASON:
             case eSIR_MAC_RSN_IE_MISMATCH_REASON:
             case eSIR_MAC_1X_AUTH_FAILURE_REASON:
+            case eSIR_MAC_PREV_AUTH_NOT_VALID_REASON:
                 // Valid reasonCode in received Disassociation frame
                 break;
 
-            case eSIR_MAC_DEAUTH_LEAVING_BSS_REASON:
             case eSIR_MAC_DISASSOC_LEAVING_BSS_REASON:
                 // Valid reasonCode in received Disassociation frame
                 // as long as we're not about to channel switch
@@ -232,7 +249,7 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
                 {
                     limLog(pMac, LOGW,
                         FL("Ignoring disassoc frame due to upcoming "
-                           "channel switch, from"),
+                           "channel switch, from\n"),
                         reasonCode);
                     limPrintMacAddr(pMac, pHdr->sa, LOGW);
                     return;
@@ -243,7 +260,7 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
                 // Invalid reasonCode in received Disassociation frame
                 // Log error and ignore the frame
                 PELOG1(limLog(pMac, LOG1,
-                       FL("received Disassoc frame with invalid reasonCode %d from "),
+                       FL("received Disassoc frame with invalid reasonCode %d from \n"),
                        reasonCode);
                 limPrintMacAddr(pMac, pHdr->sa, LOG1);)
                 return;
@@ -252,18 +269,18 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
     else
     {
         // Received Disassociation frame in either IBSS
-        // or un-known role. Log and ignore it
-        limLog(pMac, LOG1,
-               FL("received Disassoc frame with invalid reasonCode %d in role %d in sme state %d from "),
+        // or un-known role. Log error and ignore it
+        limLog(pMac, LOGE,
+               FL("received Disassoc frame with invalid reasonCode %d in role %d in sme state %d from \n"),
                reasonCode, psessionEntry->limSystemRole, psessionEntry->limSmeState);
-        limPrintMacAddr(pMac, pHdr->sa, LOG1);
+        limPrintMacAddr(pMac, pHdr->sa, LOGE);
 
         return;
     }
 
     // Disassociation from peer MAC entity
 
-   PELOG1(limLog(pMac, LOG1,
+   PELOGE(limLog(pMac, LOGE,
            FL("Received Disassoc frame from sta with assocId=%d with reasonCode=%d. Peer MAC is "MAC_ADDRESS_STR),
            pStaDs->assocId, reasonCode, MAC_ADDR_ARRAY(pHdr->sa));)
 
@@ -315,7 +332,7 @@ limProcessDisassocFrame(tpAniSirGlobal pMac, tANI_U8 *pRxPacketInfo, tpPESession
      * failure result code. By design, SME will then issue "Disassoc"  
      * and cleanup will happen at that time. 
      */
-        PELOGE(limLog(pMac, LOGE, FL("received Disassoc from AP while waiting for Reassoc Rsp"));)
+        PELOGE(limLog(pMac, LOGE, FL("received Disassoc from AP while waiting for Reassoc Rsp\n"));)
      
         if (psessionEntry->limAssocResponseData) {
             palFreeMemory(pMac->hHdd, psessionEntry->limAssocResponseData);

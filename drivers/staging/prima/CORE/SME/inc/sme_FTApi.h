@@ -39,8 +39,6 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
-
-
 #if !defined( __SME_FTAPI_H )
 #define __SME_FTAPI_H
 
@@ -51,9 +49,9 @@
   
   \brief macros and prototype for SME APIs
   
-   Copyright 2008 (c) Qualcomm Technologies, Inc.  All Rights Reserved.
+   Copyright 2008 (c) Qualcomm, Incorporated.  All Rights Reserved.
    
-   Qualcomm Technologies Confidential and Proprietary.
+   Qualcomm Confidential and Proprietary.
   
   ========================================================================*/
 typedef enum eFTIEState
@@ -84,12 +82,9 @@ typedef struct sFTSMEContext
 
     // Saved pFTPreAuthRsp
     tpSirFTPreAuthRsp psavedFTPreAuthRsp;
-    v_BOOL_t          setFTPreAuthState;
-    v_BOOL_t          setFTPTKState;
 
     // Time to trigger reassoc once pre-auth is successful
     tPalTimerHandle   preAuthReassocIntvlTimer;
-    tCsrRoamSetKey    *pCsrFTKeyInfo;
 
 } tftSMEContext, *tpftSMEContext;
 
@@ -104,10 +99,6 @@ void csrFTPreAuthRspProcessor( tHalHandle hHal, tpSirFTPreAuthRsp pFTPreAuthRsp 
 void sme_GetFTPreAuthResponse( tHalHandle hHal, tANI_U8 *ft_ies, tANI_U32 ft_ies_ip_len, tANI_U16 *ft_ies_length );
 void sme_GetRICIEs( tHalHandle hHal, tANI_U8 *ric_ies, tANI_U32 ric_ies_ip_len, tANI_U32 *ric_ies_length );
 void sme_PreauthReassocIntvlTimerCallback(void *context);
-void sme_SetFTPreAuthState(tHalHandle hHal, v_BOOL_t state);
-v_BOOL_t sme_GetFTPreAuthState(tHalHandle hHal);
-v_BOOL_t sme_GetFTPTKState(tHalHandle hHal);
-void sme_SetFTPTKState(tHalHandle hHal, v_BOOL_t state);
 
 
 #endif //#if !defined( __SME_FTAPI_H )
