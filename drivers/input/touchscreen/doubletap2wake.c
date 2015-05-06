@@ -66,6 +66,7 @@ int dt2w_switch = DT2W_DEFAULT;
 static cputime64_t tap_time_pre = 0;
 static int touch_x = 0, touch_y = 0, touch_nr = 0, x_pre = 0, y_pre = 0;
 static bool is_touching = false;
+static bool detect_dt2w_ready = true;
 static bool scr_suspended = false;
 
 // dt2w: 'touch_nr++' when 'msm_pm_enter' called - by jollaman999
@@ -148,7 +149,7 @@ static void detect_doubletap2wake(int x, int y)
 #endif
 
 	spin_lock_irqsave(&dt2w_slock, flags);
-	if (!is_touching) {
+	if ((!is_touching) && detect_dt2w_ready) {
 		is_touching = true;
 		// Make enable to set touch counts (Max : 10) - by jollaman999
 		if (touch_nr == 0) {
@@ -175,6 +176,7 @@ static void detect_doubletap2wake(int x, int y)
 			pr_info(LOGTAG"ON\n");
 			doubletap2wake_pwrtrigger();
 			doubletap2wake_reset();
+			detect_dt2w_ready = false;
 		}
 	}
 	spin_unlock_irqrestore(&dt2w_slock, flags);
@@ -279,6 +281,7 @@ static struct input_handler dt2w_input_handler = {
 
 static void dt2w_early_suspend(struct early_suspend *h) {
 	scr_suspended = true;
+	detect_dt2w_ready = true;
 }
 static void dt2w_late_resume(struct early_suspend *h) {
 	scr_suspended = false;
