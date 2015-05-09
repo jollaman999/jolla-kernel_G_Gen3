@@ -3775,11 +3775,7 @@ static int touch_probe(struct i2c_client *client, const struct i2c_device_id *id
 
 		ret = request_threaded_irq(client->irq, touch_irq_handler,
 				touch_thread_irq_handler,
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-				ts->pdata->role->irqflags | IRQF_ONESHOT | IRQF_TRIGGER_LOW | IRQF_NO_SUSPEND,
-#else
 				ts->pdata->role->irqflags | IRQF_ONESHOT,
-#endif
 				client->name, ts);
 
 		if (ret < 0) {
