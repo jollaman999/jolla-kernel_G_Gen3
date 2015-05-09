@@ -1063,6 +1063,24 @@ static inline unsigned long max_compute_capacity_of(int cpu)
 	return cpu_rq(cpu)->max_compute_capacity;
 }
 
+unsigned long __weak arch_cpu_capacity(int cpu)
+{
+	return SCHED_POWER_SCALE;
+}
+unsigned long __weak arch_max_cpu_capacity(int cpu)
+{
+	return SCHED_POWER_SCALE;
+}
+
+unsigned long __weak arch_get_cpu_capacity(int cpu)
+{
+	return SCHED_POWER_SCALE;
+}
+unsigned long __weak arch_get_max_cpu_capacity(int cpu)
+{
+	return SCHED_POWER_SCALE;
+}
+
 static inline void update_cpu_capacity(int cpu)
 {
 	int tmp_capacity = arch_get_cpu_capacity(cpu);
@@ -4196,23 +4214,6 @@ unsigned long default_scale_freq_power(struct sched_domain *sd, int cpu)
 unsigned long __weak arch_scale_freq_power(struct sched_domain *sd, int cpu)
 {
 	return default_scale_freq_power(sd, cpu);
-}
-unsigned long __weak arch_cpu_capacity(int cpu)
-{
-	return SCHED_POWER_SCALE;
-}
-unsigned long __weak arch_max_cpu_capacity(int cpu)
-{
-	return SCHED_POWER_SCALE;
-}
-
-unsigned long __weak arch_get_cpu_capacity(int cpu)
-{
-	return SCHED_POWER_SCALE;
-}
-unsigned long __weak arch_get_max_cpu_capacity(int cpu)
-{
-	return SCHED_POWER_SCALE;
 }
 
 unsigned long default_scale_smt_power(struct sched_domain *sd, int cpu)
