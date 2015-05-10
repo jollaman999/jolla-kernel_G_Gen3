@@ -207,7 +207,7 @@ static unsigned int calculate_thread_stats(void)
 	return nr_run;
 }
 
-static void __cpuinit intelli_plug_boost_fn(struct work_struct *work)
+static void intelli_plug_boost_fn(struct work_struct *work)
 {
 
 	int nr_cpus = num_online_cpus();
@@ -258,7 +258,7 @@ static void unplug_cpu(int min_active_cpu)
 	}
 }
 
-static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
+static void intelli_plug_work_fn(struct work_struct *work)
 {
 	unsigned int nr_run_stat;
 	unsigned int cpu_count = 0;
@@ -425,9 +425,9 @@ static void wakeup_boost(void)
 }
 
 #ifdef CONFIG_POWERSUSPEND
-static void __cpuinit intelli_plug_resume(struct power_suspend *handler)
+static void intelli_plug_resume(struct power_suspend *handler)
 #else
-static void __cpuinit intelli_plug_resume(struct early_suspend *handler)
+static void intelli_plug_resume(struct early_suspend *handler)
 #endif
 {
 	if (intelli_plug_active) {

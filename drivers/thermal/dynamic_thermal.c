@@ -206,7 +206,7 @@ err:
 	return;
 }
 
-static void __cpuinit check_temp(struct work_struct *work)
+static void check_temp(struct work_struct *work)
 {
 	struct cpufreq_policy *cpu_policy = NULL;
 	struct tsens_device tsens_dev;
