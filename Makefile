@@ -388,6 +388,8 @@ KBUILD_CFLAGS := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		 -Wno-format-security \
 		 -Wno-maybe-uninitialized \
 		 -Wno-sizeof-pointer-memaccess \
+		 -Wno-discarded-array-qualifiers \
+		 -Wno-logical-not-parentheses \
 		 -fno-delete-null-pointer-checks \
 		 -std=gnu89 \
 		 $(KERNEL_MODS)
