@@ -656,11 +656,7 @@ void schBeaconProcess(tpAniSirGlobal pMac, tANI_U8* pRxPacketInfo, tpPESession p
     * 
     */
     
-    if (((pAPSession = limIsApSessionActive(pMac)) != NULL)
-#ifdef WLAN_FEATURE_ROAM_SCAN_OFFLOAD
-          && (!(WDA_GET_OFFLOADSCANLEARN(pRxPacketInfo)))
-#endif
-    )
+    if((pAPSession = limIsApSessionActive(pMac)) != NULL)
     {
         beaconParams.bssIdx = pAPSession->bssIdx;
         if (pAPSession->gLimProtectionControl != WNI_CFG_FORCE_POLICY_PROTECTION_DISABLE)

@@ -513,11 +513,7 @@ sapSignalHDDevent
     /*- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -*/
 
     /* Format the Start BSS Complete event to return... */
-    if (NULL == sapContext->pfnSapEventCallback)
-    {
-        VOS_ASSERT(0);
-        return VOS_STATUS_E_FAILURE;
-    }
+    VOS_ASSERT(sapContext->pfnSapEventCallback);
 
     switch (sapHddevent)
     {

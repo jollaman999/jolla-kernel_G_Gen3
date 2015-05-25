@@ -57,7 +57,6 @@
 #include "sme_Api.h"
 #include "wlan_hdd_p2p.h"
 #include "sapApi.h"
-#include "wlan_hdd_main.h"
 
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
@@ -453,18 +452,15 @@ int wlan_hdd_cfg80211_cancel_remain_on_channel( struct wiphy *wiphy,
 #endif
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
     hdd_cfg80211_state_t *cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
-    hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX( pAdapter );
-    int status;
+    int status = 0;
 
     hddLog( LOG1, "Cancel remain on channel req");
 
-    status = wlan_hdd_validate_context(pHddCtx);
-
-    if (0 != status)
+    if (((hdd_context_t*)pAdapter->pHddCtx)->isLogpInProgress)
     {
-        VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
-                   "%s: HDD context is not valid", __func__);
-        return status;
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                "%s:LOGP in Progress. Ignore!!!", __func__);
+        return -EAGAIN;
     }
     /* FIXME cancel currently running remain on chan.
      * Need to check cookie and cancel accordingly
@@ -477,8 +473,8 @@ int wlan_hdd_cfg80211_cancel_remain_on_channel( struct wiphy *wiphy,
              __func__);
         return -EINVAL;
     }
-
-    /* wait until remain on channel ready event received
+    
+    /* wait until remain on channel ready event received 
      * for already issued remain on channel request */
     status = wait_for_completion_interruptible_timeout(&pAdapter->rem_on_chan_ready_event,
             msecs_to_jiffies(WAIT_REM_CHAN_READY));
@@ -553,27 +549,25 @@ int wlan_hdd_action( struct wiphy *wiphy, struct net_device *dev,
 #endif
     hdd_adapter_t *pAdapter = WLAN_HDD_GET_PRIV_PTR( dev );
     hdd_cfg80211_state_t *cfgState = WLAN_HDD_GET_CFG_STATE_PTR( pAdapter );
-    hdd_context_t *pHddCtx = WLAN_HDD_GET_CTX( pAdapter );
     tANI_U16 extendedWait = 0;
     tANI_U8 type = WLAN_HDD_GET_TYPE_FRM_FC(buf[0]);
     tANI_U8 subType = WLAN_HDD_GET_SUBTYPE_FRM_FC(buf[0]);
     tActionFrmType actionFrmType;
     bool noack = 0;
-    int status;
+#ifdef WLAN_FEATURE_11W
+    tANI_U8 *pTxFrmBuf = (tANI_U8 *) buf; // For SA Query, we have to set protect bit
+#endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,38))
     hdd_adapter_t *goAdapter;
 #endif
 
-    status = wlan_hdd_validate_context(pHddCtx);
-
-    if (0 != status)
+    if (((hdd_context_t*)pAdapter->pHddCtx)->isLogpInProgress)
     {
-        VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
-                   "%s: HDD context is not valid", __func__);
-        return status;
+        VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                "%s:LOGP in Progress. Ignore!!!", __func__);
+        return -EBUSY;
     }
-
 #ifdef WLAN_FEATURE_P2P_DEBUG
     if ((type == SIR_MAC_MGMT_FRAME) &&
             (subType == SIR_MAC_MGMT_ACTION) &&
@@ -794,7 +788,17 @@ int wlan_hdd_action( struct wiphy *wiphy, struct net_device *dev,
                 hddLog(LOG1, "%s: HDD_GO_NEG_REQ_ACK_PENDING \n", __func__);
             }
         }
-
+#ifdef WLAN_FEATURE_11W
+        if ((type == SIR_MAC_MGMT_FRAME) &&
+                (subType == SIR_MAC_MGMT_ACTION) &&
+                (buf[WLAN_HDD_PUBLIC_ACTION_FRAME_OFFSET] == WLAN_HDD_SA_QUERY_ACTION_FRAME))
+        {
+            VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                     "%s: Calling sme_sendAction. For Category %s", __func__, "SA Query");
+            // Since this is an SA Query Action Frame, we have to protect it
+            WLAN_HDD_SET_WEP_FRM_FC(pTxFrmBuf[1]);
+        }
+#endif
         if (eHAL_STATUS_SUCCESS !=
                sme_sendAction( WLAN_HDD_GET_HAL_CTX(pAdapter),
                                sessionId, buf, len, extendedWait, noack))
@@ -1242,30 +1246,26 @@ int wlan_hdd_del_virtual_intf( struct wiphy *wiphy, struct net_device *dev )
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,6,0))
     struct net_device *dev = wdev->netdev;
 #endif
-    hdd_context_t *pHddCtx = (hdd_context_t*) wiphy_priv(wiphy);
-    hdd_adapter_t *pVirtAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
-    int status;
-    ENTER();
+     hdd_context_t *pHddCtx = (hdd_context_t*) wiphy_priv(wiphy);
+     hdd_adapter_t *pVirtAdapter = WLAN_HDD_GET_PRIV_PTR(dev);
+     ENTER();
 
-    hddLog(VOS_TRACE_LEVEL_INFO, "%s: device_mode = %d",
-           __func__,pVirtAdapter->device_mode);
+     hddLog(VOS_TRACE_LEVEL_INFO, "%s: device_mode = %d",
+            __func__,pVirtAdapter->device_mode);
+     if (pHddCtx->isLogpInProgress)
+     {
+         VOS_TRACE(VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
+                "%s:LOGP in Progress. Ignore!!!", __func__);
+         return -EAGAIN;
+     }
 
-    status = wlan_hdd_validate_context(pHddCtx);
-
-    if (0 != status)
-    {
-        VOS_TRACE( VOS_MODULE_ID_HDD, VOS_TRACE_LEVEL_ERROR,
-                   "%s: HDD context is not valid", __func__);
-        return status;
-    }
-
-    wlan_hdd_release_intf_addr( pHddCtx,
+     wlan_hdd_release_intf_addr( pHddCtx,
                                  pVirtAdapter->macAddressCurrent.bytes );
 
-    hdd_stop_adapter( pHddCtx, pVirtAdapter );
-    hdd_close_adapter( pHddCtx, pVirtAdapter, TRUE );
-    EXIT();
-    return 0;
+     hdd_stop_adapter( pHddCtx, pVirtAdapter );
+     hdd_close_adapter( pHddCtx, pVirtAdapter, TRUE );
+     EXIT();
+     return 0;
 }
 
 void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
@@ -1332,7 +1332,7 @@ void hdd_sendMgmtFrameOverMonitorIface( hdd_adapter_t *pMonAdapter,
      skb->ip_summed = CHECKSUM_NONE;
 #ifdef WLAN_OPEN_SOURCE
 #ifdef WLAN_FEATURE_HOLD_RX_WAKELOCK
-     wake_lock_timeout(&pHddCtx->rx_wake_lock, msecs_to_jiffies(HDD_WAKE_LOCK_DURATION));
+     wake_lock_timeout(&pHddCtx->rx_wake_lock, HDD_WAKE_LOCK_DURATION);
 #endif
 #endif
      rxstat = netif_rx_ni(skb);
@@ -1663,7 +1663,7 @@ static void hdd_wlan_tx_complete( hdd_adapter_t* pAdapter,
     memset( skb->cb, 0, sizeof( skb->cb ) );
 #ifdef WLAN_OPEN_SOURCE
 #ifdef WLAN_FEATURE_HOLD_RX_WAKELOCK
-    wake_lock_timeout(&pHddCtx->rx_wake_lock, msecs_to_jiffies(HDD_WAKE_LOCK_DURATION));
+    wake_lock_timeout(&pHddCtx->rx_wake_lock, HDD_WAKE_LOCK_DURATION);
 #endif
 #endif
     if (in_interrupt())
