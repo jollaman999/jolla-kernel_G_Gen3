@@ -3061,9 +3061,6 @@ typedef struct
   /*Self Station MAC address*/
   wpt_macAddr selfMacAddr;
 
-  /*Self STA device mode*/
-  wpt_uint32 currDeviceMode;
-
   /*Status of the operation*/
   wpt_uint32  uStatus;
 }WDI_AddSTASelfInfoType;
@@ -3525,7 +3522,6 @@ typedef struct
    wpt_uint8 srcIPv6AddrValid : 1;
    wpt_uint8 targetIPv6Addr1Valid : 1;
    wpt_uint8 targetIPv6Addr2Valid : 1;
-   wpt_uint8 slotIdx;
 } WDI_NSOffloadParams;
 #endif //WLAN_NS_OFFLOAD
 

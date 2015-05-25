@@ -3375,9 +3375,11 @@ tSirRetStatus limStaSendAddBss( tpAniSirGlobal pMac, tpSirAssocRsp pAssocRsp,
 
     if (VOS_P2P_CLIENT_MODE == psessionEntry->pePersona)
     {
-        pAddBssParams->staContext.p2pCapableSta = 1;
+        pAddBssParams->staContext.p2pCapableSta = 1;       
     }
-    pAddBssParams->bSpectrumMgtEnabled = psessionEntry->spectrumMgtEnabled;
+
+    pAddBssParams->bSpectrumMgtEnabled = psessionEntry->spectrumMgtEnabled || 
+        limIsconnectedOnDFSChannel(bssDescription->channelId);
 
 #if defined WLAN_FEATURE_VOWIFI_11R
     pAddBssParams->extSetStaKeyParamValid = 0;
@@ -3657,9 +3659,11 @@ tSirRetStatus limStaSendAddBssPreAssoc( tpAniSirGlobal pMac, tANI_U8 updateEntry
 
     pAddBssParams->staContext.sessionId = psessionEntry->peSessionId;
     pAddBssParams->sessionId = psessionEntry->peSessionId;
-
+    
     pAddBssParams->halPersona = (tANI_U8)psessionEntry->pePersona; //update persona
-    pAddBssParams->bSpectrumMgtEnabled = psessionEntry->spectrumMgtEnabled;
+
+    pAddBssParams->bSpectrumMgtEnabled = psessionEntry->spectrumMgtEnabled || 
+        limIsconnectedOnDFSChannel(bssDescription->channelId);
 
 #if defined WLAN_FEATURE_VOWIFI_11R
     pAddBssParams->extSetStaKeyParamValid = 0;
@@ -3669,7 +3673,7 @@ tSirRetStatus limStaSendAddBssPreAssoc( tpAniSirGlobal pMac, tANI_U8 updateEntry
 
     //pMac->lim.gLimMlmState = eLIM_MLM_WT_ADD_BSS_RSP_PREASSOC_STATE;
     psessionEntry->limMlmState = eLIM_MLM_WT_ADD_BSS_RSP_PREASSOC_STATE;
-
+    
     MTRACE(macTrace(pMac, TRACE_CODE_MLM_STATE, psessionEntry->peSessionId, psessionEntry->limMlmState));
 
     //we need to defer the message until we get the response back from HAL.
