@@ -792,6 +792,11 @@ struct f2fs_sb_info {
 	/* For sysfs suppport */
 	struct kobject s_kobj;
 	struct completion s_kobj_unregister;
+
+	/* For shrinker support */
+	struct list_head s_list;
+	struct mutex umount_mutex;
+	unsigned int shrinker_run_no;
 };
 
 /*
