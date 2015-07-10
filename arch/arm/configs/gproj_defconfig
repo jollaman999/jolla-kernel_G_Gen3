@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.4.107-jolla-kernel_Gen3-v2.0 Kernel Configuration
+# Linux/arm 3.4.108-jolla-kernel_Gen3-v3.0 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -3318,6 +3318,8 @@ CONFIG_PRIMA_WLAN=y
 CONFIG_PRIMA_WLAN_LFR=y
 CONFIG_PRIMA_WLAN_OKC=y
 # CONFIG_PRIMA_WLAN_11AC_HIGH_TP is not set
+# CONFIG_QCOM_VOWIFI_11R is not set
+CONFIG_QCOM_TDLS=y
 
 #
 # Qualcomm MSM specific device drivers
