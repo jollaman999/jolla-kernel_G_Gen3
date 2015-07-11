@@ -3304,7 +3304,6 @@ typedef struct sSirSmeAddStaSelfReq
     tANI_U16        mesgType;
     tANI_U16        mesgLen;
     tSirMacAddr     selfMacAddr;
-    tVOS_CON_MODE   currDeviceMode;
 }tSirSmeAddStaSelfReq, *tpSirSmeAddStaSelfReq;
 
 typedef struct sSirSmeDelStaSelfReq
