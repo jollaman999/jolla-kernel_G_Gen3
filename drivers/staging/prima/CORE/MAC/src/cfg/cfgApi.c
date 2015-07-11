@@ -74,22 +74,12 @@ static void Notify(tpAniSirGlobal, tANI_U16, tANI_U32);
 // ---------------------------------------------------------------------
 tANI_U32 cfgNeedRestart(tpAniSirGlobal pMac, tANI_U16 cfgId)
 {
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return 0;
-    }
     return !!(pMac->cfg.gCfgEntry[cfgId].control & CFG_CTL_RESTART) ;
 }
 
 // ---------------------------------------------------------------------
 tANI_U32 cfgNeedReload(tpAniSirGlobal pMac, tANI_U16 cfgId)
 {
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return 0;
-    }
     return !!(pMac->cfg.gCfgEntry[cfgId].control & CFG_CTL_RELOAD) ;
 }
 
@@ -193,11 +183,6 @@ cfgSetInt(tpAniSirGlobal pMac, tANI_U16 cfgId, tANI_U32 value)
         PELOGE(cfgLog(pMac, LOGE, FL("Invalid cfg id %d"), cfgId);)
         return eSIR_CFG_INVALID_ID;
     }
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return eSIR_CFG_INVALID_ID;
-    }
 
     control  = pMac->cfg.gCfgEntry[cfgId].control;
     index    = control & CFG_BUF_INDX_MASK;
@@ -273,11 +258,6 @@ cfgCheckValid(tpAniSirGlobal pMac, tANI_U16 cfgId)
         PELOG3(cfgLog(pMac, LOG3, FL("Invalid cfg id %d"), cfgId);)
         return(eSIR_CFG_INVALID_ID);
     }
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return eSIR_CFG_INVALID_ID;
-    }
 
     control = pMac->cfg.gCfgEntry[cfgId].control;
 
@@ -324,11 +304,6 @@ wlan_cfgGetInt(tpAniSirGlobal pMac, tANI_U16 cfgId, tANI_U32 *pValue)
         PELOGE(cfgLog(pMac, LOGE, FL("Invalid cfg id %d"), cfgId);)
         retVal = eSIR_CFG_INVALID_ID;
         return retVal;
-    }
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return eSIR_CFG_INVALID_ID;
     }
 
     control = pMac->cfg.gCfgEntry[cfgId].control;
@@ -393,11 +368,6 @@ cfgIncrementInt(tpAniSirGlobal pMac, tANI_U16 cfgId, tANI_U32 value)
     {
         PELOGE(cfgLog(pMac, LOGE, FL("Invalid cfg id %d"), cfgId);)
         retVal = eSIR_CFG_INVALID_ID;
-    }
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return eSIR_CFG_INVALID_ID;
     }
 
     control  = pMac->cfg.gCfgEntry[cfgId].control;
@@ -495,11 +465,6 @@ cfgSetStrNotify(tpAniSirGlobal pMac, tANI_U16 cfgId, tANI_U8 *pStr,
     if (cfgId >= CFG_PARAM_MAX_NUM)
     {
         PELOGE(cfgLog(pMac, LOGE, FL("Invalid cfg id %d"), cfgId);)
-        return eSIR_CFG_INVALID_ID;
-    }
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
         return eSIR_CFG_INVALID_ID;
     }
 
@@ -600,10 +565,11 @@ wlan_cfgGetStr(tpAniSirGlobal pMac, tANI_U16 cfgId, tANI_U8 *pBuf, tANI_U32 *pLe
         retVal = eSIR_CFG_INVALID_ID;
         return retVal;
     }
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return eSIR_CFG_INVALID_ID;
+
+    if (!pMac->cfg.gCfgEntry) {
+        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"), cfgId);)
+        retVal = eSIR_CFG_INVALID_ID;
+        return retVal;
     }
 
     control  = pMac->cfg.gCfgEntry[cfgId].control;
@@ -681,11 +647,6 @@ wlan_cfgGetStrMaxLen(tpAniSirGlobal pMac, tANI_U16 cfgId, tANI_U32 *pLength)
         PELOGE(cfgLog(pMac, LOGE, FL("Invalid cfg id %d"), cfgId);)
         retVal = eSIR_CFG_INVALID_ID;
     }
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return eSIR_CFG_INVALID_ID;
-    }
 
     control  = pMac->cfg.gCfgEntry[cfgId].control;
     index    = control & CFG_BUF_INDX_MASK;
@@ -746,11 +707,6 @@ wlan_cfgGetStrLen(tpAniSirGlobal pMac, tANI_U16 cfgId, tANI_U32 *pLength)
     {
         PELOGE(cfgLog(pMac, LOGE, FL("Invalid cfg id %d"), cfgId);)
         retVal = eSIR_CFG_INVALID_ID;
-    }
-    if (!pMac->cfg.gCfgEntry)
-    {
-        PELOGE(cfgLog(pMac, LOGE, FL("gCfgEntry is NULL"));)
-        return eSIR_CFG_INVALID_ID;
     }
 
     control  = pMac->cfg.gCfgEntry[cfgId].control;
