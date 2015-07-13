@@ -50,11 +50,17 @@ extern bool cpufreq_max_changed_by_msm_thermal;
 #include <linux/earlysuspend.h>
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 
+#include <linux/workqueue.h>
+
 #define SCREENOFF_CONSERVATIVE_MAJOR_VERSION	1
 #define SCREENOFF_CONSERVATIVE_MINOR_VERSION	0
 
-#define SCREEN_ON 1
-#define SCREEN_OFF 0
+#define SCREENOFF_CONSERVATIVE_DELAY_MS		5000
+
+static struct delayed_work screenoff_conservative_work;
+static struct workqueue_struct *screenoff_conservative_workq;
+
+static bool is_screen_on = true;
 
 static char current_governor[CPUFREQ_NAME_LEN];
 #endif /* CONFIG_SCREENOFF_CONSERVATIVE_ */
@@ -815,6 +821,7 @@ static void screenoff_conservative_get_governor(void)
 {
 	struct cpufreq_policy *policy = NULL;
 
+	/* This makes string buffer clear. */
 	current_governor[0] = '\0';
 
 	policy = cpufreq_cpu_get(0);
@@ -838,7 +845,7 @@ static void screenoff_conservative_get_governor(void)
 	pr_info("screenoff_conservative: Current governor is \'%s\'\n", current_governor);
 }
 
-static void screenoff_conservative_set_governor(int is_screen_on)
+static void screenoff_conservative_set_governor(void)
 {
 	int err;
 	char str_governor[CPUFREQ_NAME_LEN];
@@ -885,19 +892,31 @@ static void screenoff_conservative_set_governor(int is_screen_on)
 	}
 
 	pr_info("screenoff_conservative: Set governor to \'%s\'\n", str_governor);
-	return;
+}
+
+static void screenoff_conservative_workfunc(struct work_struct *work)
+{
+	screenoff_conservative_set_governor();
 }
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 static void screenoff_conservative_early_suspend(struct early_suspend *h)
 {
+	is_screen_on = false;
+
+	cancel_delayed_work(&screenoff_conservative_work);
 	screenoff_conservative_get_governor();
-	screenoff_conservative_set_governor(SCREEN_OFF);
+	queue_delayed_work(screenoff_conservative_workq, &screenoff_conservative_work,
+					msecs_to_jiffies(SCREENOFF_CONSERVATIVE_DELAY_MS));
 }
 
 static void screenoff_conservative_late_resume(struct early_suspend *h)
 {
-	screenoff_conservative_set_governor(SCREEN_ON);
+	is_screen_on = true;
+
+	cancel_delayed_work(&screenoff_conservative_work);
+	queue_delayed_work(screenoff_conservative_workq, &screenoff_conservative_work,
+					msecs_to_jiffies(SCREENOFF_CONSERVATIVE_DELAY_MS));
 }
 
 static struct early_suspend screenoff_conservative_early_suspend_handler = {
@@ -2253,6 +2272,16 @@ int cpufreq_unregister_driver(struct cpufreq_driver *driver)
 
 	pr_debug("unregistering driver %s\n", driver->name);
 
+// screenoff_conservative - By jollaman999
+#ifdef CONFIG_SCREENOFF_CONSERVATIVE
+	cancel_delayed_work(&screenoff_conservative_work);
+	flush_scheduled_work();
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&screenoff_conservative_early_suspend_handler);
+#endif /* CONFIG_HAS_EARLYSUSPEND */
+#endif /* CONFIG_SCREENOFF_CONSERVATIVE */
+
 	subsys_interface_unregister(&cpufreq_interface);
 	unregister_hotcpu_notifier(&cpufreq_cpu_notifier);
 
@@ -2290,6 +2319,12 @@ static int __init cpufreq_core_init(void)
 	pr_info("screenoff_conservative v%d.%d - by jollaman999\n",
 		 SCREENOFF_CONSERVATIVE_MAJOR_VERSION,
 		 SCREENOFF_CONSERVATIVE_MINOR_VERSION);
+
+	screenoff_conservative_workq = alloc_workqueue("screenoff_conservative",
+							WQ_UNBOUND | WQ_RESCUER, 1);
+	if (!screenoff_conservative_workq)
+		pr_warn("screenoff_conservative: Fail to allocate work queue!\n");
+	INIT_DELAYED_WORK(&screenoff_conservative_work, screenoff_conservative_workfunc);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
 	register_early_suspend(&screenoff_conservative_early_suspend_handler);
