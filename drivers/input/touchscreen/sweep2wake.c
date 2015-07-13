@@ -91,9 +91,9 @@ MODULE_LICENSE("GPLv2");
 /* Resources */
 int s2w_switch = S2W_DEFAULT;
 static int touch_x = 0, touch_y = 0;
-static bool touch_x_called = false, touch_y_called = false;
-static bool scr_suspended = false, exec_count = true;
-static bool scr_on_touch = false, barrier[2] = {false, false};
+static bool barrier[2] = {false, false};
+static bool is_touching = false;
+static bool scr_suspended = false;
 #ifndef CONFIG_HAS_EARLYSUSPEND
 static struct notifier_block s2w_lcd_notif;
 #endif
@@ -141,76 +141,38 @@ static void sweep2wake_pwrtrigger(void) {
 
 /* reset on finger release */
 static void sweep2wake_reset(void) {
-	exec_count = true;
 	barrier[0] = false;
 	barrier[1] = false;
-	scr_on_touch = false;
+	is_touching = false;
 }
 
 /* Sweep2wake main function */
 static void detect_sweep2wake(int x, int y, bool st)
 {
         int prevx = 0, nextx = 0;
-        bool single_touch = st;
 #if S2W_DEBUG
-        pr_info(LOGTAG"x,y(%4d,%4d) single:%s\n",
-                x, y, (single_touch) ? "true" : "false");
+        pr_info(LOGTAG"x,y(%4d,%4d)\n", x, y);
 #endif
 	//left->right
-	if ((single_touch) && (scr_suspended == true) && (s2w_switch == 1)) {
+	if (!is_touching) {
 		prevx = 0;
 		nextx = S2W_X_B1;
 		if ((barrier[0] == true) ||
 		   ((x > prevx) &&
-		    (x < nextx) &&
-		    (y > 0))) {
+		    (x < nextx))) {
 			prevx = nextx;
 			nextx = S2W_X_B2;
 			barrier[0] = true;
 			if ((barrier[1] == true) ||
 			   ((x > prevx) &&
-			    (x < nextx) &&
-			    (y > 0))) {
+			    (x < nextx))) {
 				prevx = nextx;
 				barrier[1] = true;
-				if ((x > prevx) &&
-				    (y > 0)) {
+				if (x > prevx) {
 					if (x > (S2W_X_MAX - S2W_X_FINAL)) {
-						if (exec_count) {
-							pr_info(LOGTAG"ON\n");
-							sweep2wake_pwrtrigger();
-							exec_count = false;
-						}
-					}
-				}
-			}
-		}
-	//right->left
-	} else if ((single_touch) && (scr_suspended == false) && (s2w_switch > 0)) {
-		scr_on_touch=true;
-		prevx = (S2W_X_MAX - S2W_X_FINAL);
-		nextx = S2W_X_B2;
-		if ((barrier[0] == true) ||
-		   ((x < prevx) &&
-		    (x > nextx) &&
-		    (y > S2W_Y_LIMIT))) {
-			prevx = nextx;
-			nextx = S2W_X_B1;
-			barrier[0] = true;
-			if ((barrier[1] == true) ||
-			   ((x < prevx) &&
-			    (x > nextx) &&
-			    (y > S2W_Y_LIMIT))) {
-				prevx = nextx;
-				barrier[1] = true;
-				if ((x < prevx) &&
-				    (y > S2W_Y_LIMIT)) {
-					if (x < S2W_X_FINAL) {
-						if (exec_count) {
-							pr_info(LOGTAG"OFF\n");
-							sweep2wake_pwrtrigger();
-							exec_count = false;
-						}
+						pr_info(LOGTAG"ON\n");
+						sweep2wake_pwrtrigger();
+						is_touching = true;
 					}
 				}
 			}
@@ -226,38 +188,29 @@ static void s2w_input_callback(struct work_struct *unused) {
 }
 
 static void s2w_input_event(struct input_handle *handle, unsigned int type,
-				unsigned int code, int value) {
-#if S2W_DEBUG
-	pr_info("sweep2wake: code: %s|%u, val: %i\n",
-		((code==ABS_MT_POSITION_X) ? "X" :
-		(code==ABS_MT_POSITION_Y) ? "Y" :
-		(code==ABS_MT_TRACKING_ID) ? "ID" :
-		"undef"), code, value);
-#endif
-	if (code == ABS_MT_SLOT) {
-		sweep2wake_reset();
+				unsigned int code, int value)
+{
+	if ((!scr_suspended) || (!s2w_switch))
 		return;
-	}
 
-	if (code == ABS_MT_TRACKING_ID && value == -1) {
-		sweep2wake_reset();
-		return;
-	}
+	/* You can debug here with 'adb shell getevent -l' command. */
+	switch(code) {
+		case ABS_MT_SLOT:
+			sweep2wake_reset();
+			break;
 
-	if (code == ABS_MT_POSITION_X) {
-		touch_x = value;
-		touch_x_called = true;
-	}
+		case ABS_MT_TRACKING_ID:
+			if (value == 0xffffffff)
+				sweep2wake_reset();
+			break;
 
-	if (code == ABS_MT_POSITION_Y) {
-		touch_y = value;
-		touch_y_called = true;
-	}
+		case ABS_MT_POSITION_X:
+			touch_x = value;
+			queue_work_on(0, s2w_input_wq, &s2w_input_work);
+			break;
 
-	if (touch_x_called && touch_y_called) {
-		touch_x_called = false;
-		touch_y_called = false;
-		queue_work_on(0, s2w_input_wq, &s2w_input_work);
+		default:
+			break;
 	}
 }
 
