@@ -8,8 +8,6 @@
  *	Added handling for CPU hotplug
  *  Feb 2006 - Jacob Shin <jacob.shin@amd.com>
  *	Fix handling for CPU hotplug -- affected CPUs
- *  Jul 2015 - jollaman999 <admin@jollaman999.com>
- *	Added screenoff_conservative
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -43,21 +41,6 @@
 extern bool cpufreq_max_changed_by_user;
 extern bool cpufreq_max_changed_by_msm_thermal;
 #endif
-
-// screenoff_conservative - By jollaman999
-#ifdef CONFIG_SCREENOFF_CONSERVATIVE
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
-#endif /* CONFIG_HAS_EARLYSUSPEND */
-
-#define SCREENOFF_CONSERVATIVE_MAJOR_VERSION	1
-#define SCREENOFF_CONSERVATIVE_MINOR_VERSION	0
-
-#define SCREEN_ON 1
-#define SCREEN_OFF 0
-
-static char current_governor[CPUFREQ_NAME_LEN];
-#endif /* CONFIG_SCREENOFF_CONSERVATIVE_ */
 
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
@@ -416,6 +399,7 @@ static int cpufreq_parse_governor(char *str_governor, unsigned int *policy,
 out:
 	return err;
 }
+
 
 /**
  * cpufreq_per_cpu_attr_read() / show_##file_name() -
@@ -808,105 +792,6 @@ static struct attribute_group vddtbl_attr_group = {
 	.name = "vdd_table",
 };
 #endif	/* CONFIG_CPU_VOLTAGE_TABLE */
-
-// screenoff_conservative - By jollaman999
-#ifdef CONFIG_SCREENOFF_CONSERVATIVE
-static void screenoff_conservative_get_governor(void)
-{
-	struct cpufreq_policy *policy = NULL;
-
-	current_governor[0] = '\0';
-
-	policy = cpufreq_cpu_get(0);
-	if(!policy) {
-		pr_warn("screenoff_conservative: Failed to get cpu policy!\n");
-		return;
-	}
-
-	if (policy->policy == CPUFREQ_POLICY_POWERSAVE)
-		sprintf(current_governor, "powersave");
-	else if (policy->policy == CPUFREQ_POLICY_PERFORMANCE)
-		sprintf(current_governor, "performance");
-	else if (policy->governor)
-		scnprintf(current_governor, CPUFREQ_NAME_LEN, "%s",
-			policy->governor->name);
-	else {
-		pr_warn("screenoff_conservative: Failed to get current governor!\n");
-		return;
-	}
-
-	pr_info("screenoff_conservative: Current governor is \'%s\'\n", current_governor);
-}
-
-static void screenoff_conservative_set_governor(int is_screen_on)
-{
-	int err;
-	char str_governor[CPUFREQ_NAME_LEN];
-	struct cpufreq_policy *policy = NULL;
-	struct cpufreq_policy new_policy;
-
-	policy = cpufreq_cpu_get(0);
-	if(!policy) {
-		pr_warn("screenoff_conservative: cpufreq_cpu_get failed!\n");
-		return;
-	}
-
-	if (cpufreq_get_policy(&new_policy, policy->cpu)) {
-		pr_warn("screenoff_conservative: cpufreq_get_policy failed!\n");
-		return;
-	}
-
-	if (is_screen_on) {
-		scnprintf(str_governor, CPUFREQ_NAME_LEN, "%s",
-						current_governor);
-	} else {
-		scnprintf(str_governor, CPUFREQ_NAME_LEN, "%s",
-						"conservative");
-	}
-
-	if (cpufreq_parse_governor(str_governor, &new_policy.policy,
-						&new_policy.governor)) {
-		pr_warn("screenoff_conservative: cpufreq_parse_governor failed!\n");
-		return;
-	}
-
-	/* Do not use cpufreq_set_policy here or the user_policy.max
-	   will be wrongly overridden */
-	err = __cpufreq_set_policy(policy, &new_policy);
-
-	policy->user_policy.policy = policy->policy;
-	policy->user_policy.governor = policy->governor;
-
-	sysfs_notify(&policy->kobj, NULL, "scaling_governor");
-
-	if (err) {
-		pr_warn("screenoff_conservative: __cpufreq_set_policy failed!\n");
-		return;
-	}
-
-	pr_info("screenoff_conservative: Set governor to \'%s\'\n", str_governor);
-	return;
-}
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void screenoff_conservative_early_suspend(struct early_suspend *h)
-{
-	screenoff_conservative_get_governor();
-	screenoff_conservative_set_governor(SCREEN_OFF);
-}
-
-static void screenoff_conservative_late_resume(struct early_suspend *h)
-{
-	screenoff_conservative_set_governor(SCREEN_ON);
-}
-
-static struct early_suspend screenoff_conservative_early_suspend_handler = {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 10,
-	.suspend = screenoff_conservative_early_suspend,
-	.resume = screenoff_conservative_late_resume,
-};
-#endif /* CONFIG_HAS_EARLYSUSPEND */
-#endif /* CONFIG_SCREENOFF_CONSERVATIVE */
 
 struct kobject *cpufreq_global_kobject;
 EXPORT_SYMBOL(cpufreq_global_kobject);
@@ -2284,20 +2169,6 @@ static int __init cpufreq_core_init(void)
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
 #endif	/* CONFIG_CPU_VOLTAGE_TABLE */
-
-// screenoff_conservative - By jollaman999
-#ifdef CONFIG_SCREENOFF_CONSERVATIVE
-	pr_info("screenoff_conservative v%d.%d - by jollaman999\n",
-		 SCREENOFF_CONSERVATIVE_MAJOR_VERSION,
-		 SCREENOFF_CONSERVATIVE_MINOR_VERSION);
-
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	register_early_suspend(&screenoff_conservative_early_suspend_handler);
-#else
-	pr_warn("screenoff_conservative: early_suspend is not supported by this kernel!\n");
-	pr_warn("screenoff_conservative: screenoff_conservative will not working!\n");
-#endif /* CONFIG_HAS_EARLYSUSPEND */
-#endif /* CONFIG_SCREENOFF_CONSERVATIVE */
 
 	register_syscore_ops(&cpufreq_syscore_ops);
 
