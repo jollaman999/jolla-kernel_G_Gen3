@@ -66,6 +66,8 @@ static struct inode *f2fs_new_inode(struct inode *dir, umode_t mode)
 		set_inode_flag(F2FS_I(inode), FI_INLINE_DENTRY);
 
 	f2fs_init_extent_tree(inode, NULL);
+
+	stat_inc_inline_xattr(inode);
 	trace_f2fs_new_inode(inode, 0);
 	mark_inode_dirty(inode);
 	return inode;
