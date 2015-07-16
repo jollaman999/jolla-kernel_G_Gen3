@@ -36,6 +36,12 @@
 #include <linux/usb/ch9.h>
 #include <linux/usb/f_mtp.h>
 
+#ifdef CONFIG_MSM_SLEEPER
+#include <linux/cpu.h>
+#include <linux/cpufreq.h>
+#include <mach/cpufreq.h>
+#endif
+
 #define MTP_BULK_BUFFER_SIZE       16384
 #define INTR_BUFFER_SIZE           28
 
@@ -66,6 +72,16 @@
 /* constants for device status */
 #define MTP_RESPONSE_OK             0x2001
 #define MTP_RESPONSE_DEVICE_BUSY    0x2019
+
+#ifdef CONFIG_MSM_SLEEPER
+extern uint32_t maxscroff_freq;
+extern uint32_t maxscroff;
+extern uint32_t ex_max_freq;
+extern bool msm_sleeper_screen_on;
+
+bool msm_sleeper_mtp_opened = false;
+EXPORT_SYMBOL(msm_sleeper_mtp_opened);
+#endif
 
 static const char mtp_shortname[] = "mtp_usb";
 
@@ -1051,7 +1067,23 @@ out:
 
 static int mtp_open(struct inode *ip, struct file *fp)
 {
+#ifdef CONFIG_MSM_SLEEPER
+	int cpu;
+#endif
+
 	printk(KERN_INFO "mtp_open\n");
+
+#ifdef CONFIG_MSM_SLEEPER
+	msm_sleeper_mtp_opened = true;
+
+	if (maxscroff) {
+		for_each_possible_cpu(cpu)
+			msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT,
+							 ex_max_freq);
+		pr_info("msm-sleeper: mtp opened, restore max frequency.\n");
+	}
+#endif
+
 	if (mtp_lock(&_mtp_dev->open_excl))
 		return -EBUSY;
 
@@ -1065,7 +1097,23 @@ static int mtp_open(struct inode *ip, struct file *fp)
 
 static int mtp_release(struct inode *ip, struct file *fp)
 {
+#ifdef CONFIG_MSM_SLEEPER
+	int cpu;
+#endif
+
 	printk(KERN_INFO "mtp_release\n");
+
+#ifdef CONFIG_MSM_SLEEPER
+	msm_sleeper_mtp_opened = false;
+
+	if (maxscroff && !(msm_sleeper_screen_on)) {
+		for_each_possible_cpu(cpu)
+			msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT,
+							 maxscroff_freq);
+		pr_info("msm-sleeper: mtp released, limit max frequency to: %d\n",
+			 maxscroff_freq);
+	}
+#endif
 
 	mtp_unlock(&_mtp_dev->open_excl);
 	return 0;
