@@ -57,11 +57,6 @@ static int f54_fullrawcap_mode = 0;
 #endif
 #endif
 
-// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#define PREVENT_SLEEP_EXPIRE_MINUTE_DEFAULT 30
-#endif
-
 struct lge_touch_data
 {
 	void*			h_touch;
@@ -71,21 +66,12 @@ struct lge_touch_data
 	u8				ic_init_err_cnt;
 	volatile int	curr_pwr_state;
 	int				int_pin_state;
-// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	unsigned int	prevent_sleep_expire_minute;
-	bool		prevent_sleep_expired;
-#endif
 	struct i2c_client 			*client;
 	struct input_dev 			*input_dev;
 	struct hrtimer 				timer;
 	struct work_struct  		work;
 	struct delayed_work			work_init;
 	struct delayed_work			work_touch_lock;
-	// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	struct delayed_work			work_prevent_sleep;
-#endif
 	struct work_struct  		work_fw_upgrade;
 	struct early_suspend		early_suspend;
 	struct touch_platform_data 	*pdata;
@@ -3519,25 +3505,6 @@ static int keypad_enable_store(struct lge_touch_data *ts, const char *buf, size_
 	return count;
 }
 
-// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-static ssize_t prevent_sleep_expire_minute_read(struct lge_touch_data *ts, char *buf)
-{
-	return sprintf(buf, "%d\n", ts->prevent_sleep_expire_minute);
-}
-
-static int prevent_sleep_expire_minute_store(struct lge_touch_data *ts,
-						const char *buf, size_t count)
-{
-	unsigned int value = simple_strtoul(buf, NULL, 10);
-
-	if (value > 0 && value < 1440)
-		ts->prevent_sleep_expire_minute = value;
-
-	return count;
-}
-#endif
-
 static LGE_TOUCH_ATTR(platform_data, S_IRUGO | S_IWUSR, show_platform_data, NULL);
 static LGE_TOUCH_ATTR(firmware, S_IRUGO | S_IWUSR, show_fw_info, store_fw_upgrade);
 static LGE_TOUCH_ATTR(fw_ver, S_IRUGO | S_IWUSR, show_fw_ver, NULL);
@@ -3561,11 +3528,6 @@ static LGE_TOUCH_ATTR(pen_enable, S_IRUGO | S_IWUSR, show_pen_enable, NULL);
 static LGE_TOUCH_ATTR(ts_noise, S_IRUGO | S_IWUSR, show_ts_noise, NULL);
 #endif
 static LGE_TOUCH_ATTR(keypad_enable, S_IRUGO | S_IWUSR, keypad_enable_read, keypad_enable_store);
-// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-static LGE_TOUCH_ATTR(prevent_sleep_expire_minute, S_IRUGO | S_IWUSR, prevent_sleep_expire_minute_read,
-							prevent_sleep_expire_minute_store);
-#endif
 
 static struct attribute *lge_touch_attribute_list[] = {
 	&lge_touch_attr_platform_data.attr,
@@ -3591,10 +3553,6 @@ static struct attribute *lge_touch_attribute_list[] = {
 	&lge_touch_attr_ts_noise.attr,
 #endif
 	&lge_touch_attr_keypad_enable.attr,
-	// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	&lge_touch_attr_prevent_sleep_expire_minute.attr,
-#endif
 	NULL,
 };
 
@@ -3651,45 +3609,6 @@ static struct sys_device lge_touch_sys_device = {
 	.cls	= &lge_touch_sys_class,
 };
 
-// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-static void prevent_sleep_expire(struct work_struct *work_prevent_sleep)
-{
-	struct lge_touch_data *ts =
-			container_of(to_delayed_work(work_prevent_sleep),
-			struct lge_touch_data, work_prevent_sleep);
-
-	disable_irq_wake(ts->client->irq);
-
-#ifdef CUST_G_TOUCH
-	if (ts->pdata->role->ghost_detection_enable) {
-		resume_flag = 0;
-	}
-#endif
-
-	if (ts->pdata->role->operation_mode)
-		disable_irq(ts->client->irq);
-	else
-		hrtimer_cancel(&ts->timer);
-#ifdef CUST_G_TOUCH
-	if (ts->pdata->role->ghost_detection_enable) {
-		hrtimer_cancel(&hr_touch_trigger_timer);
-	}
-#endif
-
-	cancel_work_sync(&ts->work);
-	cancel_delayed_work_sync(&ts->work_init);
-	if (ts->pdata->role->key_type == TOUCH_HARD_KEY)
-		cancel_delayed_work_sync(&ts->work_touch_lock);
-
-	release_all_ts_event(ts);
-
-	touch_power_cntl(ts, ts->pdata->role->suspend_pwr);
-
-	ts->prevent_sleep_expired = true;
-}
-#endif
-
 static int touch_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
 	struct lge_touch_data *ts;
@@ -3719,14 +3638,6 @@ static int touch_probe(struct i2c_client *client, const struct i2c_device_id *id
 		ret = -EINVAL;
 		goto err_assign_platform_data;
 	}
-
-// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	ts->prevent_sleep_expire_minute = PREVENT_SLEEP_EXPIRE_MINUTE_DEFAULT;
-	ts->prevent_sleep_expired = false;
-
-	INIT_DELAYED_WORK(&ts->work_prevent_sleep, prevent_sleep_expire);
-#endif
 
 	one_sec = 1000000 / (ts->pdata->role->report_period/1000);
 	ts->ic_init_err_cnt = 0;
@@ -4086,12 +3997,6 @@ static void touch_early_suspend(struct early_suspend *h)
 
 	/* Disable hardware keys */
 	atomic_set(&ts->keypad_enable, 0);
-
-	// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	queue_delayed_work(touch_wq, &ts->work_prevent_sleep,
-			msecs_to_jiffies(ts->prevent_sleep_expire_minute * 60000));
-#endif
 }
 
 static void touch_late_resume(struct early_suspend *h)
@@ -4118,9 +4023,8 @@ static void touch_late_resume(struct early_suspend *h)
 		return;
 	}
 
-	// Introduce prevent sleep expire - by jollaman999
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	if (prevent_sleep && !(ts->prevent_sleep_expired))
+	if (prevent_sleep)
 		disable_irq_wake(ts->client->irq);
 	else
 #endif
@@ -4147,13 +4051,6 @@ static void touch_late_resume(struct early_suspend *h)
 
 	/* Enable hardware keys */
 	atomic_set(&ts->keypad_enable, 1);
-
-	// Introduce prevent sleep expire - by jollaman999
-#ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	cancel_delayed_work(&ts->work_prevent_sleep);
-
-	ts->prevent_sleep_expired = false;
-#endif
 }
 #endif
 
