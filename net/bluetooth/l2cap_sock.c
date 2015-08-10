@@ -1,6 +1,6 @@
 /*
    BlueZ - Bluetooth protocol stack for Linux
-   Copyright (c) 2000-2001, 2011-2012 Code Aurora Forum.  All rights reserved.
+   Copyright (c) 2000-2001, 2011-2012 The Linux Foundation.  All rights reserved.
    Copyright (C) 2009-2010 Gustavo F. Padovan <gustavo@padovan.org>
    Copyright (C) 2010 Google Inc.
 
@@ -201,7 +201,7 @@ static int l2cap_sock_connect(struct socket *sock, struct sockaddr *addr, int al
 		l2cap_pi(sk)->mode, sk->sk_state);
 
 	if (!addr || alen < sizeof(addr->sa_family) ||
-	    addr->sa_family != AF_BLUETOOTH)
+		addr->sa_family != AF_BLUETOOTH)
 		return -EINVAL;
 
 	memset(&la, 0, sizeof(la));
@@ -404,7 +404,6 @@ static int l2cap_sock_getname(struct socket *sock, struct sockaddr *addr, int *l
 
 	BT_DBG("sock %p, sk %p", sock, sk);
 
-	memset(la, 0, sizeof(struct sockaddr_l2));
 	addr->sa_family = AF_BLUETOOTH;
 	*len = sizeof(struct sockaddr_l2);
 

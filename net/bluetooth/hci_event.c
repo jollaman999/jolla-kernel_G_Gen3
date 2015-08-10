@@ -1818,16 +1818,7 @@ static inline void hci_disconn_complete_evt(struct hci_dev *hdev, struct sk_buff
 
 	if (conn->type == LE_LINK)
 		del_timer(&conn->smp_timer);
-//QCT_Local : Mozen Carkit SCO Noise issue 13.01.03 [s]
-	if (conn->type == SCO_LINK || conn->type == ESCO_LINK) // jasper disable_sniff
-	{
-		struct hci_conn *acl_conn = conn->link;
-		BT_DBG("%s", batostr(&conn->dst)); //jasper disable_sniff
-//		acl_conn = hci_conn_hash_lookup_ba(hdev, ACL_LINK, &conn->dst);
-		if (acl_conn != NULL)
-			hci_conn_change_link_policy(acl_conn, 0x5);
-	}
-//QCT_Local : Mozen Carkit SCO Noise issue 13.01.03 [e]
+
 	hci_proto_disconn_cfm(conn, ev->reason, 0);
 	hci_conn_del(conn);
 
@@ -2322,7 +2313,7 @@ static inline void hci_cmd_complete_evt(struct hci_dev *hdev, struct sk_buff *sk
 	if (ev->opcode != HCI_OP_NOP)
 		del_timer(&hdev->cmd_timer);
 
-	if (ev->ncmd && !test_bit(HCI_RESET, &hdev->flags)) {
+	if (ev->ncmd) {
 		atomic_set(&hdev->cmd_cnt, 1);
 		if (!skb_queue_empty(&hdev->cmd_q))
 			tasklet_schedule(&hdev->cmd_task);
