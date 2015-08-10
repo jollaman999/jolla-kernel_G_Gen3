@@ -64,7 +64,6 @@ struct msm_camera_device_platform_data {
 	uint8_t is_vpe;
 	struct msm_bus_scale_pdata *cam_bus_scale_table;
 };
-
 #ifdef CONFIG_SENSORS_MT9T013
 struct msm_camera_legacy_device_platform_data {
 	int sensor_reset;
@@ -167,7 +166,22 @@ enum msm_sensor_type {
 	BAYER_SENSOR,
 	YUV_SENSOR,
 };
+/*
+enum camera_vreg_type {
+	REG_LDO,
+	REG_VS,
+	REG_GPIO,
+	REG_MAX
+};
 
+struct camera_vreg_t {
+	const char *reg_name;
+	enum camera_vreg_type type;
+	int min_voltage;
+	int max_voltage;
+	int op_mode;
+};
+*/
 struct msm_gpio_set_tbl {
 	unsigned gpio;
 	unsigned long flags;
@@ -402,7 +416,7 @@ struct msm_panel_common_pdata {
 	struct msm_bus_scale_pdata *mdp_bus_scale_table;
 #endif
 	int mdp_rev;
-#if defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WXGA_PT)
+#if defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WXGA_PT) || defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_HD_PT)
 	void *power_on_set_1;
 	void *power_on_set_2;
 	void *power_on_set_3;
@@ -435,6 +449,20 @@ struct msm_panel_common_pdata {
 	void *color_engine_off;
 	ssize_t color_engine_off_size;
 #endif //CONFIG_LGIT_COLOR_ENGINE_SWITCH
+#elif defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WUXGA_PT) ||\
+	defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WUXGA_INVERSE_PT)
+	void *power_on_set_1_old;
+	ssize_t power_on_set_size_1_old;
+	void *power_on_set_1;
+	ssize_t power_on_set_size_1;
+	void *power_on_set_2;
+	ssize_t power_on_set_size_2;
+#if defined(CONFIG_LGE_BACKLIGHT_CABC)
+	void *power_on_set_3_noCABC;
+	ssize_t power_on_set_size_3_noCABC;
+	void *power_on_set_3;
+	ssize_t power_on_set_size_3;
+#endif
 #endif
 	void *power_off_set_1;
 	void *power_off_set_2;
@@ -444,9 +472,12 @@ struct msm_panel_common_pdata {
 	u32 ov1_wb_size;  /* overlay1 writeback size */
 	u32 mem_hid;
 	char cont_splash_enabled;
+	u32 splash_screen_addr;
+	u32 splash_screen_size;
 	char mdp_iommu_split_domain;
 	void (*bl_pwm_disable)(void);
 	int (*bl_on_status)(void);
+	bool cabc_off;
 };
 
 
@@ -506,6 +537,7 @@ struct mipi_dsi_panel_platform_data {
 	char dlane_swap;
 	void (*dsi_pwm_cfg)(void);
 	char enable_wled_bl_ctrl;
+	void (*gpio_set_backlight)(int bl_level);
 };
 
 struct lvds_panel_platform_data {
@@ -524,6 +556,7 @@ struct msm_fb_platform_data {
 	int (*allow_set_offset)(void);
 	char prim_panel_name[PANEL_NAME_MAX_LEN];
 	char ext_panel_name[PANEL_NAME_MAX_LEN];
+	int (*update_lcdc_lut)(void);
 };
 
 struct msm_hdmi_platform_data {
