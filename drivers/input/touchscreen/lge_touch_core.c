@@ -176,6 +176,8 @@ extern int cns_en;
 static struct hrtimer hr_touch_trigger_timer;
 #define MS_TO_NS(x)	(x * 1E6L)
 
+static bool has_suspended = false;
+
 static enum hrtimer_restart touch_trigger_timer_handler(struct hrtimer *timer)
 {
 	if (touch_test_dev && touch_test_dev->pdata->role->ghost_detection_enable) {
@@ -3966,6 +3968,7 @@ static void touch_early_suspend(struct early_suspend *h)
 	if (prevent_sleep) {
 		enable_irq_wake(ts->client->irq);
 		release_all_ts_event(ts);
+		has_suspended = true;
 	} else
 #endif
 	{
@@ -4024,7 +4027,7 @@ static void touch_late_resume(struct early_suspend *h)
 	}
 
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-	if (prevent_sleep)
+	if (prevent_sleep && has_suspended)
 		disable_irq_wake(ts->client->irq);
 	else
 #endif
