@@ -154,8 +154,10 @@ static void detect_doubletap2wake(int x, int y)
 		if (touch_nr == 0) {
 			new_touch(x, y);
 			// dt2w: 'touch_nr++' when 'msm_pm_enter' called - by jollaman999
-			if (dt2w_msm_pm_enter)
+			if (dt2w_msm_pm_enter) {
 				touch_nr++;
+				dt2w_msm_pm_enter = false;
+			}
 		// Make enable to set touch counts (Max : 10) - by jollaman999
 		} else if (touch_nr >= 1 && touch_nr <= dt2w_switch) {
 			if (((calc_feather(x, x_pre) < DT2W_FEATHER) || (calc_feather(y, y_pre) < DT2W_FEATHER))
@@ -281,8 +283,6 @@ static void dt2w_early_suspend(struct early_suspend *h) {
 }
 static void dt2w_late_resume(struct early_suspend *h) {
 	scr_suspended = false;
-	// dt2w: 'touch_nr++' when 'msm_pm_enter' called - by jollaman999
-	dt2w_msm_pm_enter = false;
 }
 static struct early_suspend dt2w_early_suspend_handler = {
 	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
