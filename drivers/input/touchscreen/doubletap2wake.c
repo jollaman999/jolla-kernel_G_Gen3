@@ -67,6 +67,7 @@ static cputime64_t tap_time_pre = 0;
 static int touch_x = 0, touch_y = 0, touch_nr = 0, x_pre = 0, y_pre = 0;
 static bool is_touching = false;
 static bool scr_suspended = false;
+static int dt2w_recog_time = DT2W_TIME / 2 * (dt2w_switch + 1);
 
 // dt2w: 'touch_nr++' when 'msm_pm_enter' called - by jollaman999
 bool dt2w_msm_pm_enter = false;
@@ -162,7 +163,7 @@ static void detect_doubletap2wake(int x, int y)
 		} else if (touch_nr >= 1 && touch_nr <= dt2w_switch) {
 			if (((calc_feather(x, x_pre) < DT2W_FEATHER) || (calc_feather(y, y_pre) < DT2W_FEATHER))
 			    // Make enable to set touch counts (Max : 10) - by jollaman999
-			    && ((ktime_to_ms(ktime_get()) - tap_time_pre) < (DT2W_TIME/2*(dt2w_switch+1)))) {
+			    && ((ktime_to_ms(ktime_get()) - tap_time_pre) < dt2w_recog_time)) {
 				touch_nr++;
 			} else {
 				doubletap2wake_reset();
@@ -308,9 +309,12 @@ static ssize_t dt2w_doubletap2wake_dump(struct device *dev,
 {
 	// Make enable to set touch counts (Max : 10) - by jollaman999
 	// You should tap 1 more from set number to wake your device.
-	if (buf[0] >= '0' && buf[0] <= '9' && buf[1] == '\n')
-                if (dt2w_switch != buf[0] - '0')
-		        dt2w_switch = buf[0] - '0';
+	if (buf[0] >= '0' && buf[0] <= '9' && buf[1] == '\n') {
+                if (dt2w_switch != buf[0] - '0') {
+					dt2w_switch = buf[0] - '0';
+					dt2w_recog_time = DT2W_TIME / 2 * (dt2w_switch + 1);
+				}
+	}
 
 	return count;
 }
