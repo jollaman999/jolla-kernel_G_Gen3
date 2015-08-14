@@ -12,6 +12,7 @@
 #include <linux/f2fs_fs.h>
 #include <linux/buffer_head.h>
 #include <linux/mpage.h>
+#include <linux/aio.h>
 #include <linux/writeback.h>
 #include <linux/backing-dev.h>
 #include <linux/pagevec.h>
@@ -938,7 +939,7 @@ submit_and_realloc:
 				goto set_error_page;
 			}
 			bio->bi_bdev = bdev;
-			bio->bi_iter.bi_sector = SECTOR_FROM_BLOCK(block_nr);
+			bio->bi_sector = SECTOR_FROM_BLOCK(block_nr);
 			bio->bi_end_io = f2fs_read_end_io;
 			bio->bi_private = ctx;
 		}
@@ -1489,20 +1490,44 @@ static int f2fs_write_end(struct file *file,
 	return copied;
 }
 
-static int check_direct_IO(struct inode *inode, int rw,
+static ssize_t check_direct_IO(struct inode *inode, int rw,
 		const struct iovec *iov, loff_t offset, unsigned long nr_segs)
 {
 	unsigned blocksize_mask = inode->i_sb->s_blocksize - 1;
-	int i;
+	int seg, i;
+	size_t size;
+	unsigned long addr;
+	ssize_t retval = -EINVAL;
+	loff_t end = offset;
 
 	if (offset & blocksize_mask)
 		return -EINVAL;
 
-	for (i = 0; i < nr_segs; i++)
-		if (iov[i].iov_len & blocksize_mask)
-			return -EINVAL;
+	/* Check the memory alignment.  Blocks cannot straddle pages */
+	for (seg = 0; seg < nr_segs; seg++) {
+		addr = (unsigned long)iov[seg].iov_base;
+		size = iov[seg].iov_len;
+		end += size;
+		if ((addr & blocksize_mask) || (size & blocksize_mask))
+			goto out;
 
-	return 0;
+		/* If this is a write we don't need to check anymore */
+		if (rw & WRITE)
+			continue;
+
+		/*
+		 * Check to make sure we don't have duplicate iov_base's in this
+		 * iovec, if so return EINVAL, otherwise we'll get csum errors
+		 * when reading back.
+		 */
+		for (i = seg + 1; i < nr_segs; i++) {
+			if (iov[seg].iov_base == iov[i].iov_base)
+				goto out;
+		}
+	}
+	retval = 0;
+out:
+	return retval;
 }
 
 static ssize_t f2fs_direct_IO(int rw, struct kiocb *iocb,
@@ -1525,7 +1550,7 @@ static ssize_t f2fs_direct_IO(int rw, struct kiocb *iocb,
 	if (f2fs_encrypted_inode(inode) && S_ISREG(inode->i_mode))
 		return 0;
 
-	err = check_direct_IO(inode, rw, iov, offset, nr_segs)
+	err = check_direct_IO(inode, rw, iov, offset, nr_segs);
 	if (err)
 		return err;
 

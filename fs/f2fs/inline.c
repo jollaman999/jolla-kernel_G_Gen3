@@ -535,12 +535,8 @@ bool f2fs_empty_inline_dir(struct inode *dir)
 	return true;
 }
 
-<<<<<<< HEAD
-int f2fs_read_inline_dir(struct file *file, void *dirent, filldir_t filldir)
-=======
-int f2fs_read_inline_dir(struct file *file, struct dir_context *ctx,
-				struct f2fs_str *fstr)
->>>>>>> d8c6822... f2fs crypto: add filename encryption for f2fs_readdir
+int f2fs_read_inline_dir(struct file *file, void *dirent, filldir_t filldir,
+						struct f2fs_str *fstr)
 {
 	unsigned long pos = file->f_pos;
 	unsigned int bit_pos = 0;
@@ -562,13 +558,8 @@ int f2fs_read_inline_dir(struct file *file, struct dir_context *ctx,
 
 	make_dentry_ptr(inode, &d, (void *)inline_dentry, 2);
 
-<<<<<<< HEAD
-	if (!f2fs_fill_dentries(file, dirent, filldir, &d, 0, bit_pos))
+	if (!f2fs_fill_dentries(file, dirent, filldir, &d, 0, bit_pos, fstr))
 		file->f_pos = NR_INLINE_DENTRY;
-=======
-	if (!f2fs_fill_dentries(ctx, &d, 0, fstr))
-		ctx->pos = NR_INLINE_DENTRY;
->>>>>>> d8c6822... f2fs crypto: add filename encryption for f2fs_readdir
 
 	f2fs_put_page(ipage, 1);
 	return 0;

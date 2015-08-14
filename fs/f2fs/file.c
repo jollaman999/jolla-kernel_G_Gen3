@@ -934,7 +934,7 @@ static int f2fs_collapse_range(struct inode *inode, loff_t offset, loff_t len)
 	if (ret)
 		return ret;
 
-	truncate_pagecache(inode, offset);
+	truncate_pagecache(inode, 0, offset);
 
 	ret = f2fs_do_collapse(inode, pg_start, pg_end);
 	if (ret)
@@ -1099,7 +1099,7 @@ static int f2fs_insert_range(struct inode *inode, loff_t offset, loff_t len)
 	if (ret)
 		return ret;
 
-	truncate_pagecache(inode, offset);
+	truncate_pagecache(inode, 0, offset);
 
 	pg_start = offset >> PAGE_CACHE_SHIFT;
 	pg_end = (offset + len) >> PAGE_CACHE_SHIFT;
@@ -1221,6 +1221,10 @@ noalloc:
 
 	return ret;
 }
+
+#define FALLOC_FL_COLLAPSE_RANGE	0X08
+#define FALLOC_FL_ZERO_RANGE		0X10
+#define FALLOC_FL_INSERT_RANGE		0X20
 
 static long f2fs_fallocate(struct file *file, int mode,
 				loff_t offset, loff_t len)
@@ -1481,19 +1485,19 @@ static int f2fs_ioc_shutdown(struct file *filp, unsigned long arg)
 		return -EFAULT;
 
 	switch (in) {
-	case F2FS_GOING_DOWN_FULLSYNC:
+	case FS_GOING_DOWN_FULLSYNC:
 		sb = freeze_bdev(sb->s_bdev);
 		if (sb && !IS_ERR(sb)) {
 			f2fs_stop_checkpoint(sbi);
 			thaw_bdev(sb->s_bdev, sb);
 		}
 		break;
-	case F2FS_GOING_DOWN_METASYNC:
+	case FS_GOING_DOWN_METASYNC:
 		/* do checkpoint only */
 		f2fs_sync_fs(sb, 1);
 		f2fs_stop_checkpoint(sbi);
 		break;
-	case F2FS_GOING_DOWN_NOSYNC:
+	case FS_GOING_DOWN_NOSYNC:
 		f2fs_stop_checkpoint(sbi);
 		break;
 	default:
@@ -1660,7 +1664,7 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return f2fs_ioc_release_volatile_write(filp);
 	case F2FS_IOC_ABORT_VOLATILE_WRITE:
 		return f2fs_ioc_abort_volatile_write(filp);
-	case F2FS_IOC_SHUTDOWN:
+	case FS_IOC_SHUTDOWN:
 		return f2fs_ioc_shutdown(filp, arg);
 	case FITRIM:
 		return f2fs_ioc_fitrim(filp, arg);
@@ -1675,18 +1679,6 @@ long f2fs_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	default:
 		return -ENOTTY;
 	}
-}
-
-static ssize_t f2fs_file_write_iter(struct kiocb *iocb, struct iov_iter *from)
-{
-	struct inode *inode = file_inode(iocb->ki_filp);
-
-	if (f2fs_encrypted_inode(inode) &&
-				!f2fs_has_encryption_key(inode) &&
-				f2fs_get_encryption_info(inode))
-		return -EACCES;
-
-	return generic_file_write_iter(iocb, from);
 }
 
 #ifdef CONFIG_COMPAT
