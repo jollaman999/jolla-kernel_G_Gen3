@@ -41,9 +41,6 @@ static int enabled;
 int dynamic_thermal_throttled = 0;
 EXPORT_SYMBOL_GPL(dynamic_thermal_throttled);
 
-//Save the cpu max freq before throttling
-static int pre_throttled_max = 0;
-
 static struct msm_thermal_data msm_thermal_info;
 
 static struct msm_thermal_stat msm_thermal_stats = {
@@ -60,9 +57,7 @@ static struct workqueue_struct *check_temp_workq;
 
 /* Working with drivers/cpufreq/cpufreq.c */
 bool cpufreq_max_changed_by_user = false;
-bool cpufreq_max_changed_by_msm_thermal = false;
 EXPORT_SYMBOL(cpufreq_max_changed_by_user);
-EXPORT_SYMBOL(cpufreq_max_changed_by_msm_thermal);
 
 static struct cpufreq_frequency_table *table;
 static unsigned int low_freq_index, high_freq_index, mid_freq_index;
@@ -99,27 +94,25 @@ static void start_stats(int status)
 	}
 }
 
-static int update_cpu_max_freq(struct cpufreq_policy *cpu_policy,
-				   int cpu, int max_freq)
+static int update_cpu_max_freq(int cpu, int max_freq)
 {
 	int ret = 0;
 
-	if (!cpu_policy)
-		return -EINVAL;
+	ret = msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT, max_freq);
+	if (ret)
+		return ret;
 
-	cpufreq_verify_within_limits(cpu_policy, cpu_policy->min, max_freq);
-	cpu_policy->user_policy.max = max_freq;
+	if (max_freq != MSM_CPUFREQ_NO_LIMIT)
+		pr_info("dynamic_thermal: Limiting cpu%d max frequency to %d\n",
+				cpu, max_freq);
+	else
+		pr_info("dynamic_thermal: Max frequency reset for cpu%d\n", cpu);
 
 	ret = cpufreq_update_policy(cpu);
-	if (!ret)
-		pr_debug("dynamic_thermal: Setting CPU%d max frequency to %d\n",
-								cpu, max_freq);
-
-	cpufreq_max_changed_by_user = false;
-	cpufreq_max_changed_by_msm_thermal = true;
 
 	return ret;
 }
+
 
 static unsigned int max_freq_finder(uint32_t cpufreq_max,
 				unsigned int low_freq_index,
@@ -201,6 +194,8 @@ static void dynamic_thermal(void)
 
 	msm_thermal_info.allowed_mid_freq = table[freq_find_index-1].frequency;
 	msm_thermal_info.allowed_max_freq = table[freq_find_index-2].frequency;
+	
+	cpufreq_max_changed_by_user = false;
 
 err:
 	return;
@@ -208,7 +203,6 @@ err:
 
 static void check_temp(struct work_struct *work)
 {
-	struct cpufreq_policy *cpu_policy = NULL;
 	struct tsens_device tsens_dev;
 	unsigned long temp = 0;
 	uint32_t max_freq = 0;
@@ -242,20 +236,14 @@ static void check_temp(struct work_struct *work)
 	}
 
 	update_policy = false;
-	cpu_policy = cpufreq_cpu_get(cpu);
-	if(!cpu_policy) {
-		pr_warn("dynamic_thermal: Failed to get cpu policy!\n");
-		goto reschedule;
-	}
+	
+	if(msm_thermal_info.dynamic_thermal_control
+	   && cpufreq_max_changed_by_user)
+		dynamic_thermal();
 
 	/* save pre-throttled max freq value */
 	if (dynamic_thermal_throttled == 0)
-		pre_throttled_max = cpu_policy->max;
-
-	if(msm_thermal_info.dynamic_thermal_control
-	   && cpufreq_max_changed_by_user
-	   && !cpufreq_max_changed_by_msm_thermal)
-		dynamic_thermal();
+		max_freq = MSM_CPUFREQ_NO_LIMIT;
 
 	//low trip point
 	if ((temp >= msm_thermal_info.allowed_low_high) &&
@@ -269,12 +257,8 @@ static void check_temp(struct work_struct *work)
 	//low clr point
 	} else if ((temp < msm_thermal_info.allowed_low_low) &&
 		   (dynamic_thermal_throttled > 0)) {
-		if (pre_throttled_max != 0)
-			max_freq = pre_throttled_max;
-		else {
-			max_freq = CONFIG_MSM_CPU_FREQ_MAX;
-			pr_warn("dynamic_thermal: ERROR! pre_throttled_max=0, falling back to %u\n", max_freq);
-		}
+		max_freq = MSM_CPUFREQ_NO_LIMIT;
+		
 		update_policy = true;
 		for (i = 1; i < CONFIG_NR_CPUS; i++) {
 			if (cpu_online(i))
@@ -320,11 +304,12 @@ static void check_temp(struct work_struct *work)
 	update_stats();
 	start_stats(dynamic_thermal_throttled);
 	if (update_policy) {
-		for_each_possible_cpu(cpu)
-			update_cpu_max_freq(cpu_policy, cpu, max_freq);
+		for_each_possible_cpu(cpu) {
+			ret = update_cpu_max_freq(cpu, max_freq);
+			if(ret)
+				pr_warn("dynamic_thermal: Failed to limit max cpu freq on cpu%d!\n", cpu);
+		}
 	}
-
-	cpufreq_cpu_put(cpu_policy);
 
 reschedule:
 	if (enabled)
@@ -337,23 +322,14 @@ reschedule:
 static void disable_msm_thermal(void)
 {
 	int cpu = 0;
-	struct cpufreq_policy *cpu_policy = NULL;
 
 	 enabled = 0;
 	/* make sure check_temp is no longer running */
 	cancel_delayed_work(&check_temp_work);
 	flush_scheduled_work();
 
-	if (pre_throttled_max != 0) {
-		for_each_possible_cpu(cpu) {
-			cpu_policy = cpufreq_cpu_get(cpu);
-			if (cpu_policy) {
-				if (cpu_policy->max < cpu_policy->cpuinfo.max_freq)
-					update_cpu_max_freq(cpu_policy, cpu, pre_throttled_max);
-				cpufreq_cpu_put(cpu_policy);
-			}
-		}
-	}
+	for_each_possible_cpu(cpu)
+		update_cpu_max_freq(cpu, MSM_CPUFREQ_NO_LIMIT);
 
 	pr_warn("dynamic_thermal: Warning! Thermal guard disabled!");
 }

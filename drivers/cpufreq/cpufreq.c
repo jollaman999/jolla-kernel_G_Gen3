@@ -39,9 +39,7 @@
 // Dynamic thermal control - By jollaman999
 #ifdef CONFIG_DYNAMIC_THERMAL_CONTROL
 extern bool cpufreq_max_changed_by_user;
-extern bool cpufreq_max_changed_by_msm_thermal;
 #endif
-
 /**
  * The "cpufreq driver" - the arch- or hardware-dependent low
  * level driver of CPUFreq support, and its spinlock. This lock
@@ -501,7 +499,6 @@ static ssize_t store_scaling_max_freq
 	ret = __cpufreq_set_policy(policy, &new_policy);
 
 	cpufreq_max_changed_by_user = true;
-	cpufreq_max_changed_by_msm_thermal = false;
 
 	return ret ? ret : count;
 }
