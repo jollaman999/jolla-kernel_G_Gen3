@@ -54,45 +54,13 @@ MODULE_LICENSE("GPLv2");
 /* Tuneables */
 #define S2W_DEBUG		0
 #define S2W_DEFAULT		0
-#define S2W_PWRKEY_DUR          0
-
-#ifdef CONFIG_MACH_MSM8974_HAMMERHEAD
-/* Hammerhead aka Nexus 5 */
-#define S2W_Y_MAX               1920
-#define S2W_X_MAX               1080
-#define S2W_Y_LIMIT             S2W_Y_MAX-130
-#define S2W_X_B1                400
-#define S2W_X_B2                700
-#define S2W_X_FINAL             250
-#elif defined(CONFIG_MACH_APQ8064_MAKO)
-/* Mako aka Nexus 4 */
-#define S2W_Y_LIMIT             2350
-#define S2W_X_MAX               1540
-#define S2W_X_B1                500
-#define S2W_X_B2                1000
-#define S2W_X_FINAL             300
-#elif defined(CONFIG_MACH_APQ8064_FLO)
-/* Flo/Deb aka Nexus 7 2013 */
-#define S2W_Y_MAX               2240
-#define S2W_X_MAX               1344
-#define S2W_Y_LIMIT             S2W_Y_MAX-110
-#define S2W_X_B1                500
-#define S2W_X_B2                700
-#define S2W_X_FINAL             450
-#else
-/* defaults */
-#define S2W_Y_LIMIT             2350
-#define S2W_X_MAX               1540
-#define S2W_X_B1                500
-#define S2W_X_B2                1000
-#define S2W_X_FINAL             300
-#endif
-
+#define S2W_FEATHER             500
 
 /* Resources */
 int s2w_switch = S2W_DEFAULT;
-static int touch_x = 0, touch_y = 0;
-static bool barrier[2] = {false, false};
+static int touch_x = 0;
+static int prev_x = 0;
+static bool is_new_touch = false;
 static bool is_touching = false;
 static bool scr_suspended = false;
 #ifndef CONFIG_HAS_EARLYSUSPEND
@@ -125,10 +93,8 @@ static void sweep2wake_presspwr(struct work_struct * sweep2wake_presspwr_work) {
                 return;
 	input_event(sweep2wake_pwrdev, EV_KEY, KEY_POWER, 1);
 	input_event(sweep2wake_pwrdev, EV_SYN, 0, 0);
-	msleep(S2W_PWRKEY_DUR);
 	input_event(sweep2wake_pwrdev, EV_KEY, KEY_POWER, 0);
 	input_event(sweep2wake_pwrdev, EV_SYN, 0, 0);
-	msleep(S2W_PWRKEY_DUR);
         mutex_unlock(&pwrkeyworklock);
 	return;
 }
@@ -142,48 +108,46 @@ static void sweep2wake_pwrtrigger(void) {
 
 /* reset on finger release */
 static void sweep2wake_reset(void) {
-	barrier[0] = false;
-	barrier[1] = false;
 	is_touching = false;
+	prev_x = 0;
+	is_new_touch = false;
+}
+
+/* init a new touch */
+static void new_touch(int x) {
+	prev_x = x;
+	is_new_touch = true;
 }
 
 /* Sweep2wake main function */
-static void detect_sweep2wake(int x, int y, bool st)
+static void detect_sweep2wake(int x)
 {
-        int prevx = 0, nextx = 0;
 #if S2W_DEBUG
-        pr_info(LOGTAG"x,y(%4d,%4d)\n", x, y);
+        pr_info(LOGTAG"x(%4d)\n", x);
 #endif
-	//left->right
+
 	if (!is_touching) {
-		prevx = 0;
-		nextx = S2W_X_B1;
-		if ((barrier[0] == true) ||
-		   ((x > prevx) &&
-		    (x < nextx))) {
-			prevx = nextx;
-			nextx = S2W_X_B2;
-			barrier[0] = true;
-			if ((barrier[1] == true) ||
-			   ((x > prevx) &&
-			    (x < nextx))) {
-				prevx = nextx;
-				barrier[1] = true;
-				if (x > prevx) {
-					if (x > (S2W_X_MAX - S2W_X_FINAL)) {
-						pr_info(LOGTAG"ON\n");
-						sweep2wake_pwrtrigger();
-						is_touching = true;
-					}
-				}
-			}
+		if (!is_new_touch)
+			new_touch(x);
+
+		// left->right
+		if (prev_x - x > S2W_FEATHER) {
+			pr_info(LOGTAG"ON\n");
+			is_touching = true;
+			sweep2wake_pwrtrigger();
+		}
+		// right->left
+		else if (x - prev_x > S2W_FEATHER) {
+			pr_info(LOGTAG"ON\n");
+			is_touching = true;
+			sweep2wake_pwrtrigger();
 		}
 	}
 }
 
 static void s2w_input_callback(struct work_struct *unused) {
 
-	detect_sweep2wake(touch_x, touch_y, true);
+	detect_sweep2wake(touch_x);
 
 	return;
 }
