@@ -1005,6 +1005,11 @@ config TOUCHSCREEN_DOUBLETAP2WAKE
 	select TOUCHSCREEN_PREVENT_SLEEP
 	default n
 
+config TOUCHSCREEN_SCROFF_VOLCTR
+	tristate "Screen Off Volume Control for touchscreens"
+	select TOUCHSCREEN_PREVENT_SLEEP
+	default n
+
 config TOUCHSCREEN_PREVENT_SLEEP
 	bool "Inihibit sleep on modified touchscreen drivers"
 	default n
