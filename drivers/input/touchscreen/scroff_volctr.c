@@ -134,10 +134,8 @@ static void new_touch(int y) {
 static void detect_scroff_volctr(int y)
 {
 	if (!is_touching) {
-		if (!is_new_touch) {
+		if (!is_new_touch)
 			new_touch(y);
-			return;
-		}
 
 		if (ktime_to_ms(ktime_get()) - touch_time_pre < SOVC_TIME_GAP) {
 			// Volume Up (down->up)
