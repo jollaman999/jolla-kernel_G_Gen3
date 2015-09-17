@@ -57,13 +57,17 @@ MODULE_LICENSE("GPLv2");
 #define SOVC_DEBUG		0
 #define SOVC_DEFAULT		1
 #define SOVC_FEATHER		400
+#define SOVC_FEATHER_GAP	50
 #define SOVC_TIME_GAP		250
+
+// btn_press_count = (y2 - y1 - SOVC_FEATHER) / SOVC_FEATHER_GAP + 1
 
 /* Resources */
 int sovc_switch = SOVC_DEFAULT;
 static cputime64_t touch_time_pre = 0;
 static int touch_y = 0;
 static int prev_y = 0;
+static int btn_press_count = 0;
 static bool is_new_touch = false;
 static bool is_vol_up = false;
 static bool is_touching = false;
@@ -89,22 +93,40 @@ static int __init read_sovc_cmdline(char *sovc)
 }
 __setup("sovc=", read_sovc_cmdline);
 
-/* Voluem Key work func */
-static void scroff_volctr_volupdown(struct work_struct * scroff_volctr_volupdown_work) {
-	if (!mutex_trylock(&keyworklock))
-		return;
+/* Voluem Key Up */
+static void scroff_volctr_volup(int count) {
+	int i;
 
-	if (is_vol_up) {
+	for (i = 0; i < count; i++) {
 		input_event(sovc_input_volupdown, EV_KEY, KEY_VOLUMEUP, 1);
 		input_event(sovc_input_volupdown, EV_SYN, 0, 0);
 		input_event(sovc_input_volupdown, EV_KEY, KEY_VOLUMEUP, 0);
 		input_event(sovc_input_volupdown, EV_SYN, 0, 0);
-	} else {
+	}
+}
+
+/* Voluem Key Down */
+static void scroff_volctr_voldown(int count) {
+	int i;
+
+	for (i = 0; i < count; i++) {
 		input_event(sovc_input_volupdown, EV_KEY, KEY_VOLUMEDOWN, 1);
 		input_event(sovc_input_volupdown, EV_SYN, 0, 0);
 		input_event(sovc_input_volupdown, EV_KEY, KEY_VOLUMEDOWN, 0);
 		input_event(sovc_input_volupdown, EV_SYN, 0, 0);
 	}
+}
+
+/* Voluem Key work func */
+static void scroff_volctr_volupdown(struct work_struct * scroff_volctr_volupdown_work) {
+	if (!mutex_trylock(&keyworklock))
+		return;
+
+	if (is_vol_up)
+		scroff_volctr_volup(btn_press_count);
+	else
+		scroff_volctr_voldown(btn_press_count);
+
 	mutex_unlock(&keyworklock);
 	return;
 }
@@ -121,6 +143,7 @@ static void scroff_volctr_reset(void) {
 	is_touching = false;
 	prev_y = 0;
 	is_new_touch = false;
+	btn_press_count = 0;
 }
 
 /* init a new touch */
@@ -144,6 +167,8 @@ static void detect_scroff_volctr(int y)
 				pr_info(LOGTAG"UP\n");
 #endif
 				is_touching = true;
+				btn_press_count =
+					(prev_y - y - SOVC_FEATHER) / SOVC_FEATHER_GAP + 1;
 				is_vol_up = true;
 				scroff_volctr_volupdown_trigger();
 			}
@@ -153,6 +178,8 @@ static void detect_scroff_volctr(int y)
 				pr_info(LOGTAG"DOWN\n");
 #endif
 				is_touching = true;
+				btn_press_count =
+					(y - prev_y - SOVC_FEATHER) / SOVC_FEATHER_GAP + 1;
 				is_vol_up = false;
 				scroff_volctr_volupdown_trigger();
 			}
