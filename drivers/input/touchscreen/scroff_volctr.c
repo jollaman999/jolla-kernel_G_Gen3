@@ -34,6 +34,19 @@
 #include <linux/hrtimer.h>
 #include <asm-generic/cputime.h>
 
+/* ******************* HOW TO WORK *******************
+ *  If you sweep touchscreen in SOVC_TIME_GAP (ms) time
+ * and detach your finger, volume will increase/decrease
+ * just one time.
+ *
+ *  Otherwise if you sweep touchscreen and hold your
+ * finger on touchscreen, volume will increase/decrease
+ * continuously based on SOVC_REEXEC_DELAY (ms) time.
+ *
+ * See the working vedio
+ * https://youtu.be/htDYZ148Q-w
+ */
+
 /* uncomment since no touchscreen defines android touch, do that here */
 //#define ANDROID_TOUCH_DECLARED
 
@@ -45,7 +58,7 @@
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "jollaman999 <admin@jollaman999.com>"
 #define DRIVER_DESCRIPTION "Screen Off Volume Control for almost any device"
-#define DRIVER_VERSION "1.0"
+#define DRIVER_VERSION "1.1"
 #define LOGTAG "[scroff_volctr]: "
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
@@ -58,6 +71,7 @@ MODULE_LICENSE("GPLv2");
 #define SOVC_DEFAULT		1
 #define SOVC_FEATHER		400
 #define SOVC_TIME_GAP		250
+#define SOVC_REEXEC_DELAY	250
 
 /* Resources */
 int sovc_switch = SOVC_DEFAULT;
@@ -72,6 +86,8 @@ static struct input_dev * sovc_input_volupdown;
 static DEFINE_MUTEX(keyworklock);
 static struct workqueue_struct *sovc_input_wq;
 static struct work_struct sovc_input_work;
+
+static void scroff_volctr_volupdown_delayed_trigger(void);
 
 /* Read cmdline for sovc */
 static int __init read_sovc_cmdline(char *sovc)
@@ -90,44 +106,73 @@ static int __init read_sovc_cmdline(char *sovc)
 __setup("sovc=", read_sovc_cmdline);
 
 /* Voluem Key work func */
-static void scroff_volctr_volupdown(struct work_struct * scroff_volctr_volupdown_work) {
+static void scroff_volctr_volupdown(struct work_struct *scroff_volctr_volupdown_work)
+{
+	if ((!is_touching) || (!scr_suspended))
+		return;
+
 	if (!mutex_trylock(&keyworklock))
 		return;
 
 	if (is_vol_up) {
+#ifdef SOVC_DEBUG
+		pr_info(LOGTAG"UP\n");
+#endif
 		input_event(sovc_input_volupdown, EV_KEY, KEY_VOLUMEUP, 1);
 		input_event(sovc_input_volupdown, EV_SYN, 0, 0);
 		input_event(sovc_input_volupdown, EV_KEY, KEY_VOLUMEUP, 0);
 		input_event(sovc_input_volupdown, EV_SYN, 0, 0);
 	} else {
+#ifdef SOVC_DEBUG
+		pr_info(LOGTAG"DOWN\n");
+#endif
 		input_event(sovc_input_volupdown, EV_KEY, KEY_VOLUMEDOWN, 1);
 		input_event(sovc_input_volupdown, EV_SYN, 0, 0);
 		input_event(sovc_input_volupdown, EV_KEY, KEY_VOLUMEDOWN, 0);
 		input_event(sovc_input_volupdown, EV_SYN, 0, 0);
 	}
 	mutex_unlock(&keyworklock);
-	return;
+
+	if (is_touching)
+		scroff_volctr_volupdown_delayed_trigger();
 }
-static DECLARE_WORK(scroff_volctr_volupdown_work, scroff_volctr_volupdown);
+static DECLARE_DELAYED_WORK(scroff_volctr_volupdown_work, scroff_volctr_volupdown);
 
 /* Voluem Key trigger */
-static void scroff_volctr_volupdown_trigger(void) {
-	schedule_work(&scroff_volctr_volupdown_work);
-	return;
+static void scroff_volctr_volupdown_trigger(void)
+{
+	schedule_delayed_work(&scroff_volctr_volupdown_work, 0);
+}
+
+/* Voluem Key delayed trigger */
+static void scroff_volctr_volupdown_delayed_trigger(void)
+{
+	schedule_delayed_work(&scroff_volctr_volupdown_work,
+				msecs_to_jiffies(SOVC_REEXEC_DELAY));
 }
 
 /* reset on finger release */
-static void scroff_volctr_reset(void) {
+static void scroff_volctr_reset(void)
+{
 	is_touching = false;
-	prev_y = 0;
 	is_new_touch = false;
+	prev_y = 0;
 }
 
 /* init a new touch */
-static void new_touch(int y) {
+static void new_touch(int y)
+{
 	touch_time_pre = ktime_to_ms(ktime_get());
-	prev_y = y;
 	is_new_touch = true;
+	prev_y = y;
+}
+
+/* exec volume control */
+static void exec_volctr(bool vol_up)
+{
+	is_touching = true;
+	is_vol_up = vol_up;
+	scroff_volctr_volupdown_trigger();
 }
 
 /* scroff_volctr main function */
@@ -138,33 +183,17 @@ static void detect_scroff_volctr(int y)
 			new_touch(y);
 
 		if (ktime_to_ms(ktime_get()) - touch_time_pre < SOVC_TIME_GAP) {
-			// Volume Up (down->up)
-			if (prev_y - y > SOVC_FEATHER) {
-#ifdef SOVC_DEBUG
-				pr_info(LOGTAG"UP\n");
-#endif
-				is_touching = true;
-				is_vol_up = true;
-				scroff_volctr_volupdown_trigger();
-			}
-			// Volume Down (up->down)
-			else if (y - prev_y > SOVC_FEATHER) {
-#ifdef SOVC_DEBUG
-				pr_info(LOGTAG"DOWN\n");
-#endif
-				is_touching = true;
-				is_vol_up = false;
-				scroff_volctr_volupdown_trigger();
-			}
+			if (prev_y - y > SOVC_FEATHER) // Volume Up (down->up)
+				exec_volctr(true);
+			else if (y - prev_y > SOVC_FEATHER) //Volume Down (up->down)
+				exec_volctr(false);
 		}
 	}
 }
 
-static void sovc_input_callback(struct work_struct *unused) {
-
+static void sovc_input_callback(struct work_struct *unused)
+{
 	detect_scroff_volctr(touch_y);
-
-	return;
 }
 
 static void sovc_input_event(struct input_handle *handle, unsigned int type,
@@ -194,7 +223,8 @@ static void sovc_input_event(struct input_handle *handle, unsigned int type,
 	}
 }
 
-static int input_dev_filter(struct input_dev *dev) {
+static int input_dev_filter(struct input_dev *dev)
+{
 	if (strstr(dev->name, "touch"))
 		return 0;
 	else
@@ -202,7 +232,8 @@ static int input_dev_filter(struct input_dev *dev) {
 }
 
 static int sovc_input_connect(struct input_handler *handler,
-				struct input_dev *dev, const struct input_device_id *id) {
+				struct input_dev *dev, const struct input_device_id *id)
+{
 	struct input_handle *handle;
 	int error;
 
@@ -233,7 +264,8 @@ err2:
 	return error;
 }
 
-static void sovc_input_disconnect(struct input_handle *handle) {
+static void sovc_input_disconnect(struct input_handle *handle)
+{
 	input_close_device(handle);
 	input_unregister_handle(handle);
 	kfree(handle);
@@ -252,11 +284,13 @@ static struct input_handler sovc_input_handler = {
 	.id_table	= sovc_ids,
 };
 
-static void sovc_early_suspend(struct early_suspend *h) {
+static void sovc_early_suspend(struct early_suspend *h)
+{
 	scr_suspended = true;
 }
 
-static void sovc_late_resume(struct early_suspend *h) {
+static void sovc_late_resume(struct early_suspend *h)
+{
 	scr_suspended = false;
 }
 
@@ -347,6 +381,7 @@ static int __init scroff_volctr_init(void)
 		return -EFAULT;
 	}
 	INIT_WORK(&sovc_input_work, sovc_input_callback);
+
 	rc = input_register_handler(&sovc_input_handler);
 	if (rc)
 		pr_err("%s: Failed to register sovc_input_handler\n", __func__);
@@ -385,7 +420,6 @@ static void __exit scroff_volctr_exit(void)
 	destroy_workqueue(sovc_input_wq);
 	input_unregister_device(sovc_input_volupdown);
 	input_free_device(sovc_input_volupdown);
-	return;
 }
 
 module_init(scroff_volctr_init);
