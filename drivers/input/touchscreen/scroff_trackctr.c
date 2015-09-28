@@ -35,10 +35,10 @@
 #include <asm-generic/cputime.h>
 
 /* ******************* HOW TO WORK *******************
- *  If you sweep touchscreen left to right in
+ *  If you sweep touchscreen right to left in
  * SOTC_TIME_GAP (ms) time, you can play next track.
  *
- *  Otherwise if you sweep touchscreen right to left,
+ *  Otherwise if you sweep touchscreen left to right,
  * you can play previous track.
  */
 
@@ -162,9 +162,9 @@ static void detect_scroff_trackctr(int x)
 			new_touch(x);
 
 		if (ktime_to_ms(ktime_get()) - touch_time_pre < SOTC_TIME_GAP) {
-			if (prev_x - x > SOTC_FEATHER) // Track Next (left->right)
+			if (prev_x - x > SOTC_FEATHER) // Track Next (right->left)
 				exec_trackctr(true);
-			else if (x - prev_x > SOTC_FEATHER) // Track Previous (right->left)
+			else if (x - prev_x > SOTC_FEATHER) // Track Previous (left->right)
 				exec_trackctr(false);
 		}
 	}
