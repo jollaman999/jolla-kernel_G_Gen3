@@ -1010,6 +1010,11 @@ config TOUCHSCREEN_SCROFF_VOLCTR
 	select TOUCHSCREEN_PREVENT_SLEEP
 	default n
 
+config TOUCHSCREEN_SCROFF_TRACKCTR
+	tristate "Screen Off Track Control for touchscreens"
+	select TOUCHSCREEN_PREVENT_SLEEP
+	default n
+
 config TOUCHSCREEN_PREVENT_SLEEP
 	bool "Inihibit sleep on modified touchscreen drivers"
 	default n
