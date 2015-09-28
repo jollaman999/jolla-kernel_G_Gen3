@@ -105,7 +105,7 @@ static int __init read_sovc_cmdline(char *sovc)
 }
 __setup("sovc=", read_sovc_cmdline);
 
-/* Voluem Key work func */
+/* Volume Key work func */
 static void scroff_volctr_volupdown(struct work_struct *scroff_volctr_volupdown_work)
 {
 	if ((!is_touching) || (!scr_suspended))
@@ -185,7 +185,7 @@ static void detect_scroff_volctr(int y)
 		if (ktime_to_ms(ktime_get()) - touch_time_pre < SOVC_TIME_GAP) {
 			if (prev_y - y > SOVC_FEATHER) // Volume Up (down->up)
 				exec_volctr(true);
-			else if (y - prev_y > SOVC_FEATHER) //Volume Down (up->down)
+			else if (y - prev_y > SOVC_FEATHER) // Volume Down (up->down)
 				exec_volctr(false);
 		}
 	}
