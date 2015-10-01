@@ -58,7 +58,7 @@
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "jollaman999 <admin@jollaman999.com>"
 #define DRIVER_DESCRIPTION "Screen Off Volume Control for almost any device"
-#define DRIVER_VERSION "1.1"
+#define DRIVER_VERSION "1.2"
 #define LOGTAG "[scroff_volctr]: "
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
@@ -86,6 +86,11 @@ static struct input_dev * sovc_input_volupdown;
 static DEFINE_MUTEX(keyworklock);
 static struct workqueue_struct *sovc_input_wq;
 static struct work_struct sovc_input_work;
+
+// Call event only when playing music.
+#ifdef CONFIG_SND_SOC_WCD9310
+extern bool wcd9310_is_playing;
+#endif
 
 static void scroff_volctr_volupdown_delayed_trigger(void);
 
@@ -199,7 +204,7 @@ static void sovc_input_callback(struct work_struct *unused)
 static void sovc_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)
 {
-	if ((!scr_suspended) || (!sovc_switch))
+	if ((!scr_suspended) || (!sovc_switch) || (!wcd9310_is_playing))
 		return;
 
 	/* You can debug here with 'adb shell getevent -l' command. */

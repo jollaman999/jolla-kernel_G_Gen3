@@ -43,9 +43,11 @@ static int cfilt_adjust_ms = 10;
 module_param(cfilt_adjust_ms, int, 0644);
 MODULE_PARM_DESC(cfilt_adjust_ms, "delay after adjusting cfilt voltage in ms");
 
+
 // intelli_plug: Force intelli_plug working when playing music while screen off
+// scroff_volctr, scroff_trackctr: Call event only when playing music.
 // - jollaman999 -
-#ifdef CONFIG_INTELLI_PLUG
+#if defined(CONFIG_INTELLI_PLUG) || defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
 bool wcd9310_is_playing;
 EXPORT_SYMBOL(wcd9310_is_playing);
 #endif
@@ -4213,8 +4215,9 @@ static int tabla_startup(struct snd_pcm_substream *substream,
 #endif /*CONFIG_LGE_AUX_NOISE*/
 
 	// intelli_plug: Force intelli_plug working when playing music while screen off
+	// scroff_volctr, scroff_trackctr: Call event only when playing music.
 	// - jollaman999 -
-#ifdef CONFIG_INTELLI_PLUG
+#if defined(CONFIG_INTELLI_PLUG) || defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
 	wcd9310_is_playing = true;
 #endif
 
@@ -4271,8 +4274,9 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 	}
 
 	// intelli_plug: Force intelli_plug working when playing music while screen off
+	// scroff_volctr, scroff_trackctr: Call event only when playing music.
 	// - jollaman999 -
-#ifdef CONFIG_INTELLI_PLUG
+#if defined(CONFIG_INTELLI_PLUG) || defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
 	wcd9310_is_playing = false;
 #endif
 }
