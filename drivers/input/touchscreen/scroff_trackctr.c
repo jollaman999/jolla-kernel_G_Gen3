@@ -53,7 +53,7 @@
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "jollaman999 <admin@jollaman999.com>"
 #define DRIVER_DESCRIPTION "Screen Off Track Control for almost any device"
-#define DRIVER_VERSION "1.1"
+#define DRIVER_VERSION "1.0"
 #define LOGTAG "[scroff_trackctr]: "
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
@@ -80,11 +80,6 @@ static struct input_dev * sotc_input_nextpre;
 static DEFINE_MUTEX(keyworklock);
 static struct workqueue_struct *sotc_input_wq;
 static struct work_struct sotc_input_work;
-
-// Call event only when playing music.
-#ifdef CONFIG_SND_SOC_WCD9310
-extern bool wcd9310_is_playing;
-#endif
 
 /* Read cmdline for sotc */
 static int __init read_sotc_cmdline(char *sotc)
@@ -183,7 +178,7 @@ static void sotc_input_callback(struct work_struct *unused)
 static void sotc_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)
 {
-	if ((!scr_suspended) || (!sotc_switch) || (!wcd9310_is_playing))
+	if ((!scr_suspended) || (!sotc_switch))
 		return;
 
 	/* You can debug here with 'adb shell getevent -l' command. */
