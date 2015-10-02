@@ -58,7 +58,7 @@
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "jollaman999 <admin@jollaman999.com>"
 #define DRIVER_DESCRIPTION "Screen Off Volume Control for almost any device"
-#define DRIVER_VERSION "1.1"
+#define DRIVER_VERSION "1.2"
 #define LOGTAG "[scroff_volctr]: "
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
@@ -86,6 +86,12 @@ static struct input_dev * sovc_input_volupdown;
 static DEFINE_MUTEX(keyworklock);
 static struct workqueue_struct *sovc_input_wq;
 static struct work_struct sovc_input_work;
+
+// scroff_volctr, scroff_trackctr: Call the events only when pcm started
+// - jollaman999 -
+#ifdef CONFIG_SND_SOC_QDSP6
+extern bool is_pcm_started;
+#endif
 
 static void scroff_volctr_volupdown_delayed_trigger(void);
 
@@ -199,6 +205,13 @@ static void sovc_input_callback(struct work_struct *unused)
 static void sovc_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)
 {
+// scroff_volctr, scroff_trackctr: Call the events only when pcm started
+// - jollaman999 -
+#ifdef CONFIG_SND_SOC_QDSP6
+	if (!is_pcm_started)
+		return;
+#endif
+
 	if ((!scr_suspended) || (!sovc_switch))
 		return;
 
