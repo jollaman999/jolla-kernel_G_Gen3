@@ -306,13 +306,6 @@ static int msm_pcm_capture_prepare(struct snd_pcm_substream *substream)
 	return ret;
 }
 
-// scroff_volctr, scroff_trackctr: Call the events only when pcm started
-// - jollaman999 -
-#if defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
-bool is_pcm_started;
-EXPORT_SYMBOL(is_pcm_started);
-#endif
-
 static int msm_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 {
 	int ret = 0;
@@ -325,11 +318,6 @@ static int msm_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
 		pr_debug("%s: Trigger start\n", __func__);
 		q6asm_run_nowait(prtd->audio_client, 0, 0, 0);
-		// scroff_volctr, scroff_trackctr: Call the events only when pcm started
-		// - jollaman999 -
-#if defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
-		is_pcm_started = true;
-#endif
 		break;
 	case SNDRV_PCM_TRIGGER_STOP:
 		pr_debug("SNDRV_PCM_TRIGGER_STOP\n");
@@ -338,22 +326,12 @@ static int msm_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 			break;
 		prtd->cmd_ack = 0;
 		q6asm_cmd_nowait(prtd->audio_client, CMD_EOS);
-		// scroff_volctr, scroff_trackctr: Call the events only when pcm started
-		// - jollaman999 -
-#if defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
-		is_pcm_started = false;
-#endif
 		break;
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
 		pr_debug("SNDRV_PCM_TRIGGER_PAUSE\n");
 		q6asm_cmd_nowait(prtd->audio_client, CMD_PAUSE);
 		atomic_set(&prtd->start, 0);
-		// scroff_volctr, scroff_trackctr: Call the events only when pcm started
-		// - jollaman999 -
-#if defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
-		is_pcm_started = false;
-#endif
 		break;
 	default:
 		ret = -EINVAL;
