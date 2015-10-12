@@ -976,10 +976,10 @@ static int f2fs_collapse_range(struct inode *inode, loff_t offset, loff_t len)
 
 	/* write out all moved pages, if possible */
 	filemap_write_and_wait_range(inode->i_mapping, offset, LLONG_MAX);
-	truncate_pagecache(inode, offset);
+	truncate_pagecache(inode, 0, offset);
 
 	new_size = i_size_read(inode) - len;
-	truncate_pagecache(inode, new_size);
+	truncate_pagecache(inode, 0, new_size);
 
 	ret = truncate_blocks(inode, new_size, true);
 	if (!ret)
@@ -1149,7 +1149,7 @@ static int f2fs_insert_range(struct inode *inode, loff_t offset, loff_t len)
 
 	/* write out all moved pages, if possible */
 	filemap_write_and_wait_range(inode->i_mapping, offset, LLONG_MAX);
-	truncate_pagecache(inode, offset);
+	truncate_pagecache(inode, 0, offset);
 
 	if (!ret)
 		i_size_write(inode, new_size);
