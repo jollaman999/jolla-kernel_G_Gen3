@@ -53,7 +53,7 @@
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "jollaman999 <admin@jollaman999.com>"
 #define DRIVER_DESCRIPTION "Screen Off Track Control for almost any device"
-#define DRIVER_VERSION "1.0"
+#define DRIVER_VERSION "1.1"
 #define LOGTAG "[scroff_trackctr]: "
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
@@ -80,6 +80,11 @@ static struct input_dev * sotc_input_nextpre;
 static DEFINE_MUTEX(keyworklock);
 static struct workqueue_struct *sotc_input_wq;
 static struct work_struct sotc_input_work;
+
+// Disable when music stopped
+#ifdef CONFIG_SND_SOC_WCD9310
+EXPORT_SYMBOL(sotc_switch);
+#endif
 
 /* Read cmdline for sotc */
 static int __init read_sotc_cmdline(char *sotc)

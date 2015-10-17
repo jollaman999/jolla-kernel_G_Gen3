@@ -58,7 +58,7 @@
 /* Version, author, desc, etc */
 #define DRIVER_AUTHOR "jollaman999 <admin@jollaman999.com>"
 #define DRIVER_DESCRIPTION "Screen Off Volume Control for almost any device"
-#define DRIVER_VERSION "1.1"
+#define DRIVER_VERSION "1.2"
 #define LOGTAG "[scroff_volctr]: "
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
@@ -86,6 +86,11 @@ static struct input_dev * sovc_input_volupdown;
 static DEFINE_MUTEX(keyworklock);
 static struct workqueue_struct *sovc_input_wq;
 static struct work_struct sovc_input_work;
+
+// Disable when music stopped
+#ifdef CONFIG_SND_SOC_WCD9310
+EXPORT_SYMBOL(sovc_switch);
+#endif
 
 static void scroff_volctr_volupdown_delayed_trigger(void);
 
