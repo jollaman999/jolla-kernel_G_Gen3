@@ -68,15 +68,24 @@ static cpumask_t speedchange_cpumask;
 static spinlock_t speedchange_cpumask_lock;
 static struct mutex gov_lock;
 
-/* Hi speed to bump to from lo speed when load burst (default max) */
-static unsigned int hispeed_freq;
+/* Default values */
+#define DEFAULT_HISPEED_FREQ 918000
+#define DEFAULT_GO_HISPEED_LOAD 90
+#define DEFAULT_TARGET_LOAD 90
+#define DEFAULT_MIN_SAMPLE_TIME 40000
+#define DEFAULT_TIMER_RATE 30000
+#define DEFAULT_ABOVE_HISPEED_DELAY 90000
+#define DEFAULT_BOOST 0
+#define DEFAULT_IO_IS_BUSY 1
+#define DEFAULT_MAX_FREQ_HYSTERESIS 100000
+
+/* Hi speed to bump to from lo speed when load burst */
+static unsigned int hispeed_freq = DEFAULT_HISPEED_FREQ;
 
 /* Go to hi speed when CPU load at or above this value. */
-#define DEFAULT_GO_HISPEED_LOAD 99
 static unsigned long go_hispeed_load = DEFAULT_GO_HISPEED_LOAD;
 
 /* Target load.  Lower values result in higher CPU speeds. */
-#define DEFAULT_TARGET_LOAD 90
 static unsigned int default_target_loads[] = {DEFAULT_TARGET_LOAD};
 static spinlock_t target_loads_lock;
 static unsigned int *target_loads = default_target_loads;
@@ -85,20 +94,17 @@ static int ntarget_loads = ARRAY_SIZE(default_target_loads);
 /*
  * The minimum amount of time to spend at a frequency before we can ramp down.
  */
-#define DEFAULT_MIN_SAMPLE_TIME (80 * USEC_PER_MSEC)
 static unsigned long min_sample_time = DEFAULT_MIN_SAMPLE_TIME;
 
 /*
  * The sample rate of the timer used to increase frequency
  */
-#define DEFAULT_TIMER_RATE (20 * USEC_PER_MSEC)
 static unsigned long timer_rate = DEFAULT_TIMER_RATE;
 
 /*
  * Wait this long before raising speed above hispeed, by default a single
  * timer interval.
  */
-#define DEFAULT_ABOVE_HISPEED_DELAY DEFAULT_TIMER_RATE
 static unsigned int default_above_hispeed_delay[] = {
 	DEFAULT_ABOVE_HISPEED_DELAY };
 static spinlock_t above_hispeed_delay_lock;
@@ -106,7 +112,7 @@ static unsigned int *above_hispeed_delay = default_above_hispeed_delay;
 static int nabove_hispeed_delay = ARRAY_SIZE(default_above_hispeed_delay);
 
 /* Non-zero means indefinite speed boost active */
-static int boost_val;
+static int boost_val = DEFAULT_BOOST;
 /* Duration of a boot pulse in usecs */
 static int boostpulse_duration_val = DEFAULT_MIN_SAMPLE_TIME;
 /* End time of boost pulse in ktime converted to usecs */
@@ -119,12 +125,12 @@ static u64 boostpulse_endtime;
 #define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
-static bool io_is_busy;
+static bool io_is_busy = DEFAULT_IO_IS_BUSY;
 
 /*
  * Stay at max freq for at least max_freq_hysteresis before dropping frequency.
  */
-static unsigned long max_freq_hysteresis = 0;
+static unsigned long max_freq_hysteresis = DEFAULT_MAX_FREQ_HYSTERESIS;
 
 /* Round to starting jiffy of next evaluation window */
 static u64 round_to_nw_start(u64 jif)
