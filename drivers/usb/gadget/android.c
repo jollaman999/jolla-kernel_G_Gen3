@@ -2084,9 +2084,9 @@ static struct android_usb_function *supported_functions[] = {
 #ifdef CONFIG_USB_G_LGE_ANDROID_DTF
         &dtf_function,
 #endif
-/* MSE-ADD-E iC Data Transfer 2012/05/22 */
-#ifndef CONFIG_USB_G_LGE_ANDROID	
 	&midi_function,
+/* MSE-ADD-E iC Data Transfer 2012/05/22 */
+#ifndef CONFIG_USB_G_LGE_ANDROID
 	&uasp_function,
 #endif	
 	&hid_function,
