@@ -759,24 +759,6 @@ static void __init cpu_pmu_init(struct arm_pmu *armpmu)
 	armpmu->type = ARM_PMU_DEVICE_CPU;
 }
 
-static int cpu_has_active_perf(void)
-{
-	struct pmu_hw_events *hw_events;
-	int enabled;
-
-	if (!cpu_pmu)
-		return 0;
-
-	hw_events = cpu_pmu->get_hw_events();
-	enabled = bitmap_weight(hw_events->used_mask, cpu_pmu->num_events);
-
-	if (enabled)
-		/*Even one event's existence is good enough.*/
-		return 1;
-
-	return 0;
-}
-
 void enable_irq_callback(void *info)
 {
 	int irq = *(unsigned int *)info;
