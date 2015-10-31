@@ -71,11 +71,12 @@ static struct mutex gov_lock;
 /* Default values */
 #define DEFAULT_HISPEED_FREQ 918000
 #define DEFAULT_GO_HISPEED_LOAD 90
-#define DEFAULT_TARGET_LOAD 90
+#define DEFAULT_TARGET_LOAD 85
 #define DEFAULT_MIN_SAMPLE_TIME 40000
 #define DEFAULT_TIMER_RATE 30000
-#define DEFAULT_ABOVE_HISPEED_DELAY 90000
+#define DEFAULT_ABOVE_HISPEED_DELAY 20000
 #define DEFAULT_BOOST 0
+#define DEFAULT_TIMER_SLACK 30000
 #define DEFAULT_IO_IS_BUSY 1
 #define DEFAULT_MAX_FREQ_HYSTERESIS 100000
 
@@ -122,7 +123,6 @@ static u64 boostpulse_endtime;
  * Max additional time to wait in idle, beyond timer_rate, at speeds above
  * minimum before wakeup to reduce speed, or -1 if unnecessary.
  */
-#define DEFAULT_TIMER_SLACK (4 * DEFAULT_TIMER_RATE)
 static int timer_slack_val = DEFAULT_TIMER_SLACK;
 
 static bool io_is_busy = DEFAULT_IO_IS_BUSY;
