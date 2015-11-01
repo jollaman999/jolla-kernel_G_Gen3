@@ -45,7 +45,7 @@
  * towards the ideal frequency and slower after it has passed it. Similarly,
  * lowering the frequency towards the ideal frequency is faster than below it.
  */
-#define DEFAULT_AWAKE_IDEAL_FREQ 702000
+#define DEFAULT_AWAKE_IDEAL_FREQ 1026000
 static unsigned int awake_ideal_freq;
 
 /*
