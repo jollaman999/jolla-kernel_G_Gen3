@@ -51,11 +51,23 @@ bool wcd9310_is_playing;
 EXPORT_SYMBOL(wcd9310_is_playing);
 #endif
 
-// scroff_volctr: Temporary disable when music stopped
+// scroff_volctr: Temporary disable when music stopped with delay
 // - jollaman999 -
 #ifdef CONFIG_TOUCHSCREEN_SCROFF_VOLCTR
+#include <linux/workqueue.h>
+#define SOVC_DISABLE_DELAY	5000	// Temporary disable sovc after this time
 extern int sovc_tmp_onoff;
-#endif
+static bool sovc_play_again = false;
+
+static void scroff_volctr_disable(struct work_struct *scroff_volctr_disable_work)
+{
+	if (sovc_play_again)
+		return;
+
+	sovc_tmp_onoff = 0;
+}
+static DECLARE_DELAYED_WORK(scroff_volctr_disable_work, scroff_volctr_disable);
+#endif /* CONFIG_TOUCHSCREEN_SCROFF_VOLCTR */
 
 #define WCD9310_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
 			SNDRV_PCM_RATE_32000 | SNDRV_PCM_RATE_48000 |\
@@ -4224,9 +4236,10 @@ static int tabla_startup(struct snd_pcm_substream *substream,
 #ifdef CONFIG_INTELLI_PLUG
 	wcd9310_is_playing = true;
 #endif
-	// scroff_volctr: Temporary disable when music stopped
+	// scroff_volctr: Temporary disable when music stopped with delay
 	// - jollaman999 -
 #ifdef CONFIG_TOUCHSCREEN_SCROFF_VOLCTR
+	sovc_play_again = true;
 	sovc_tmp_onoff = 1;
 #endif
 
@@ -4287,10 +4300,12 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 #ifdef CONFIG_INTELLI_PLUG
 	wcd9310_is_playing = false;
 #endif
-	// scroff_volctr: Temporary disable when music stopped
+	// scroff_volctr: Temporary disable when music stopped with delay
 	// - jollaman999 -
 #ifdef CONFIG_TOUCHSCREEN_SCROFF_VOLCTR
-	sovc_tmp_onoff = 0;
+	sovc_play_again = false;
+	schedule_delayed_work(&scroff_volctr_disable_work, SOVC_DISABLE_DELAY);
+	pr_info("[scroff_volctr]: SOVC Temporary Disabled.\n");
 #endif
 }
 
