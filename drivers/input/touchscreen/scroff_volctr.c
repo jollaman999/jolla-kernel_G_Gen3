@@ -79,7 +79,7 @@ MODULE_VERSION(DRIVER_VERSION);
 MODULE_LICENSE("GPLv2");
 
 /* Tuneables */
-#define SOVC_DEBUG		0	// Debug On/Off
+//#define SOVC_DEBUG			// Uncomment this to turn on the debug
 #define SOVC_DEFAULT		1	// Default On/Off
 #define SOVC_VOL_FEATHER	400	// Touch degree for volume control
 #define SOVC_TRACK_FEATHER	500	// Touch degree for track control
@@ -98,8 +98,10 @@ static bool is_touching = false;
 static bool scr_suspended = false;
 static struct input_dev *sovc_input;
 static DEFINE_MUTEX(keyworklock);
-static struct workqueue_struct *sovc_input_wq;
-static struct work_struct sovc_input_work;
+static struct workqueue_struct *sovc_volume_input_wq;
+static struct workqueue_struct *sovc_track_input_wq;
+static struct work_struct sovc_volume_input_work;
+static struct work_struct sovc_track_input_work;
 
 enum CONTROL {
 	NO_CONTROL,
@@ -238,8 +240,8 @@ static void exec_key(int key)
 	scroff_volctr_key_trigger();
 }
 
-/* scroff_volctr main function */
-static void sovc_input_callback(struct work_struct *unused)
+/* scroff_volctr volume function */
+static void sovc_volume_input_callback(struct work_struct *unused)
 {
 	if (!is_touching) {
 		if (!is_new_touch)
@@ -250,7 +252,19 @@ static void sovc_input_callback(struct work_struct *unused)
 				exec_key(VOL_UP);
 			else if (touch_y - prev_y > SOVC_VOL_FEATHER) // Volume Down (up->down)
 				exec_key(VOL_DOWN);
-			else if (prev_x - touch_x > SOVC_TRACK_FEATHER) // Track Next (right->left)
+		}
+	}
+}
+
+/* scroff_volctr track function */
+static void sovc_track_input_callback(struct work_struct *unused)
+{
+	if (!is_touching) {
+		if (!is_new_touch)
+			new_touch(touch_x, touch_y);
+
+		if (ktime_to_ms(ktime_get()) - touch_time_pre < SOVC_TIME_GAP) {
+			if (prev_x - touch_x > SOVC_TRACK_FEATHER) // Track Next (right->left)
 				exec_key(TRACK_NEXT);
 			else if (touch_x - prev_x > SOVC_TRACK_FEATHER) // Track Previous (left->right)
 				exec_key(TRACK_PREVIOUS);
@@ -298,7 +312,7 @@ static void sovc_volume_input_event(struct input_handle *handle, unsigned int ty
 	switch(code) {
 		case ABS_MT_POSITION_Y:
 			touch_y = value;
-			queue_work_on(0, sovc_input_wq, &sovc_input_work);
+			queue_work_on(0, sovc_volume_input_wq, &sovc_volume_input_work);
 			break;
 
 		default:
@@ -319,7 +333,7 @@ static void sovc_track_input_event(struct input_handle *handle, unsigned int typ
 	switch(code) {
 		case ABS_MT_POSITION_X:
 			touch_x = value;
-			queue_work_on(0, sovc_input_wq, &sovc_input_work);
+			queue_work_on(0, sovc_track_input_wq, &sovc_track_input_work);
 			break;
 
 		default:
@@ -525,12 +539,18 @@ static int __init scroff_volctr_init(void)
 		goto err_input_dev;
 	}
 
-	sovc_input_wq = create_workqueue("sovciwq");
-	if (!sovc_input_wq) {
-		pr_err("%s: Failed to create sovciwq workqueue\n", __func__);
+	sovc_volume_input_wq = create_workqueue("sovc_volume_iwq");
+	if (!sovc_volume_input_wq) {
+		pr_err("%s: Failed to create sovc_volume_iwq workqueue\n", __func__);
 		return -EFAULT;
 	}
-	INIT_WORK(&sovc_input_work, sovc_input_callback);
+	INIT_WORK(&sovc_volume_input_work, sovc_volume_input_callback);
+	sovc_track_input_wq = create_workqueue("sovc_track_iwq");
+	if (!sovc_track_input_wq) {
+		pr_err("%s: Failed to create sovc_track_iwq workqueue\n", __func__);
+		return -EFAULT;
+	}
+	INIT_WORK(&sovc_track_input_work, sovc_track_input_callback);
 
 	rc = input_register_handler(&sovc_volume_input_handler);
 	if (rc)
@@ -575,7 +595,8 @@ static void __exit scroff_volctr_exit(void)
 #endif
 	input_unregister_handler(&sovc_volume_input_handler);
 	input_unregister_handler(&sovc_track_input_handler);
-	destroy_workqueue(sovc_input_wq);
+	destroy_workqueue(sovc_volume_input_wq);
+	destroy_workqueue(sovc_track_input_wq);
 	input_unregister_device(sovc_input);
 	input_free_device(sovc_input);
 }
