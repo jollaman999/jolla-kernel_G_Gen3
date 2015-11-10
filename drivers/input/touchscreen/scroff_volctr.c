@@ -218,8 +218,6 @@ static void scroff_volctr_reset(void)
 {
 	is_touching = false;
 	is_new_touch = false;
-	prev_x = 0;
-	prev_y = 0;
 	control = NO_CONTROL;
 }
 
@@ -241,38 +239,33 @@ static void exec_key(int key)
 }
 
 /* scroff_volctr main function */
-static void detect_scroff_volctr(int x, int y)
+static void sovc_input_callback(struct work_struct *unused)
 {
 	if (!is_touching) {
 		if (!is_new_touch)
-			new_touch(x, y);
+			new_touch(touch_x, touch_y);
 
 		if (ktime_to_ms(ktime_get()) - touch_time_pre < SOVC_TIME_GAP) {
-			if (prev_y - y > SOVC_VOL_FEATHER) // Volume Up (down->up)
+			if (prev_y - touch_y > SOVC_VOL_FEATHER) // Volume Up (down->up)
 				exec_key(VOL_UP);
-			else if (y - prev_y > SOVC_VOL_FEATHER) // Volume Down (up->down)
+			else if (touch_y - prev_y > SOVC_VOL_FEATHER) // Volume Down (up->down)
 				exec_key(VOL_DOWN);
-			else if (prev_x - x > SOVC_TRACK_FEATHER) // Track Next (right->left)
+			else if (prev_x - touch_x > SOVC_TRACK_FEATHER) // Track Next (right->left)
 				exec_key(TRACK_NEXT);
-			else if (x - prev_x > SOVC_TRACK_FEATHER) // Track Previous (left->right)
+			else if (touch_x - prev_x > SOVC_TRACK_FEATHER) // Track Previous (left->right)
 				exec_key(TRACK_PREVIOUS);
 		}
 	}
 }
 
-static void sovc_input_callback(struct work_struct *unused)
-{
-	detect_scroff_volctr(touch_x, touch_y);
-}
-
-static void sovc_input_event(struct input_handle *handle, unsigned int type,
+static int sovc_input_common_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)
 {
 	if (!sovc_switch)
-		return;
+		return 1;
 
 	if ((!scr_suspended) || (!sovc_tmp_onoff))
-		return;
+		return 1;
 
 	/* You can debug here with 'adb shell getevent -l' command. */
 	switch(code) {
@@ -285,13 +278,47 @@ static void sovc_input_event(struct input_handle *handle, unsigned int type,
 				scroff_volctr_reset();
 			break;
 
-		case ABS_MT_POSITION_X:
-			touch_x = value;
+		default:
+			break;
+	}
+
+	return 0;
+}
+
+static void sovc_volume_input_event(struct input_handle *handle, unsigned int type,
+				unsigned int code, int value)
+{
+	int out;
+
+	out = sovc_input_common_event(handle, type, code, value);
+	if (out)
+		return;
+
+	/* You can debug here with 'adb shell getevent -l' command. */
+	switch(code) {
+		case ABS_MT_POSITION_Y:
+			touch_y = value;
 			queue_work_on(0, sovc_input_wq, &sovc_input_work);
 			break;
 
-		case ABS_MT_POSITION_Y:
-			touch_y = value;
+		default:
+			break;
+	}
+}
+
+static void sovc_track_input_event(struct input_handle *handle, unsigned int type,
+				unsigned int code, int value)
+{
+	int out;
+
+	out = sovc_input_common_event(handle, type, code, value);
+	if (out)
+		return;
+
+	/* You can debug here with 'adb shell getevent -l' command. */
+	switch(code) {
+		case ABS_MT_POSITION_X:
+			touch_x = value;
 			queue_work_on(0, sovc_input_wq, &sovc_input_work);
 			break;
 
@@ -309,7 +336,8 @@ static int input_dev_filter(struct input_dev *dev)
 }
 
 static int sovc_input_connect(struct input_handler *handler,
-				struct input_dev *dev, const struct input_device_id *id)
+				struct input_dev *dev, const struct input_device_id *id,
+				char *handle_name)
 {
 	struct input_handle *handle;
 	int error;
@@ -323,7 +351,7 @@ static int sovc_input_connect(struct input_handler *handler,
 
 	handle->dev = dev;
 	handle->handler = handler;
-	handle->name = "sovc";
+	handle->name = handle_name;
 
 	error = input_register_handle(handle);
 	if (error)
@@ -341,6 +369,18 @@ err2:
 	return error;
 }
 
+static int sovc_volume_input_connect(struct input_handler *handler,
+				struct input_dev *dev, const struct input_device_id *id)
+{
+	return sovc_input_connect(handler, dev, id, "sovc_volume");
+}
+
+static int sovc_track_input_connect(struct input_handler *handler,
+				struct input_dev *dev, const struct input_device_id *id)
+{
+	return sovc_input_connect(handler, dev, id, "sovc_track");
+}
+
 static void sovc_input_disconnect(struct input_handle *handle)
 {
 	input_close_device(handle);
@@ -353,11 +393,19 @@ static const struct input_device_id sovc_ids[] = {
 	{ },
 };
 
-static struct input_handler sovc_input_handler = {
-	.event		= sovc_input_event,
-	.connect	= sovc_input_connect,
+static struct input_handler sovc_volume_input_handler = {
+	.event		= sovc_volume_input_event,
+	.connect	= sovc_volume_input_connect,
 	.disconnect	= sovc_input_disconnect,
-	.name		= "sovc_inputreq",
+	.name		= "sovc_volume_inputreq",
+	.id_table	= sovc_ids,
+};
+
+static struct input_handler sovc_track_input_handler = {
+	.event		= sovc_track_input_event,
+	.connect	= sovc_track_input_connect,
+	.disconnect	= sovc_input_disconnect,
+	.name		= "sovc_track_inputreq",
 	.id_table	= sovc_ids,
 };
 
@@ -484,9 +532,12 @@ static int __init scroff_volctr_init(void)
 	}
 	INIT_WORK(&sovc_input_work, sovc_input_callback);
 
-	rc = input_register_handler(&sovc_input_handler);
+	rc = input_register_handler(&sovc_volume_input_handler);
 	if (rc)
-		pr_err("%s: Failed to register sovc_input_handler\n", __func__);
+		pr_err("%s: Failed to register sovc_volume_input_handler\n", __func__);
+	rc = input_register_handler(&sovc_track_input_handler);
+	if (rc)
+		pr_err("%s: Failed to register sovc_track_input_handler\n", __func__);
 
 	register_early_suspend(&sovc_early_suspend_handler);
 
@@ -522,7 +573,8 @@ static void __exit scroff_volctr_exit(void)
 #ifndef ANDROID_TOUCH_DECLARED
 	kobject_del(android_touch_kobj);
 #endif
-	input_unregister_handler(&sovc_input_handler);
+	input_unregister_handler(&sovc_volume_input_handler);
+	input_unregister_handler(&sovc_track_input_handler);
 	destroy_workqueue(sovc_input_wq);
 	input_unregister_device(sovc_input);
 	input_free_device(sovc_input);
