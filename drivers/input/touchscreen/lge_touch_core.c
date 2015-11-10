@@ -46,9 +46,6 @@
 #ifdef CONFIG_TOUCHSCREEN_SCROFF_VOLCTR
 #include <linux/input/scroff_volctr.h>
 #endif
-#ifdef CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR
-#include <linux/input/scroff_trackctr.h>
-#endif
 #endif
 
 #ifdef CUST_G_TOUCH
@@ -3951,7 +3948,7 @@ static void touch_early_suspend(struct early_suspend *h)
 	struct lge_touch_data *ts =
 			container_of(h, struct lge_touch_data, early_suspend);
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR)
 	bool prevent_sleep = false;
 #endif
 #if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
@@ -3962,9 +3959,6 @@ static void touch_early_suspend(struct early_suspend *h)
 #endif
 #if defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR)
 	prevent_sleep = prevent_sleep || (sovc_switch == 1);
-#endif
-#if defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
-	prevent_sleep = prevent_sleep || (sotc_switch == 1);
 #endif
 #endif
 
@@ -4019,7 +4013,7 @@ static void touch_late_resume(struct early_suspend *h)
 	struct lge_touch_data *ts =
 			container_of(h, struct lge_touch_data, early_suspend);
 #ifdef CONFIG_TOUCHSCREEN_PREVENT_SLEEP
-#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR) || defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
+#if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE) || defined(CONFIG_TOUCHSCREEN_DOUBLETAP2WAKE) || defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR)
 	bool prevent_sleep = false;
 #endif
 #if defined(CONFIG_TOUCHSCREEN_SWEEP2WAKE)
@@ -4029,9 +4023,6 @@ static void touch_late_resume(struct early_suspend *h)
 	prevent_sleep = prevent_sleep || (dt2w_switch > 0);
 #endif
 #if defined(CONFIG_TOUCHSCREEN_SCROFF_VOLCTR)
-	prevent_sleep = prevent_sleep || (sovc_switch == 1);
-#endif
-#if defined(CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR)
 	prevent_sleep = prevent_sleep || (sovc_switch == 1);
 #endif
 #endif

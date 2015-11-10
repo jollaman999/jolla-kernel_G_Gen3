@@ -1006,12 +1006,7 @@ config TOUCHSCREEN_DOUBLETAP2WAKE
 	default n
 
 config TOUCHSCREEN_SCROFF_VOLCTR
-	tristate "Screen Off Volume Control for touchscreens"
-	select TOUCHSCREEN_PREVENT_SLEEP
-	default n
-
-config TOUCHSCREEN_SCROFF_TRACKCTR
-	tristate "Screen Off Track Control for touchscreens"
+	tristate "Screen Off Volume & Touch Control for touchscreens"
 	select TOUCHSCREEN_PREVENT_SLEEP
 	default n
 

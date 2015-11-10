@@ -50,13 +50,11 @@ MODULE_PARM_DESC(cfilt_adjust_ms, "delay after adjusting cfilt voltage in ms");
 bool wcd9310_is_playing;
 EXPORT_SYMBOL(wcd9310_is_playing);
 #endif
-// scroff_volctr, scroff_trackctr: Disable when music stopped
+
+// scroff_volctr: Temporary disable when music stopped
 // - jollaman999 -
 #ifdef CONFIG_TOUCHSCREEN_SCROFF_VOLCTR
-extern int sovc_switch;
-#endif
-#ifdef CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR
-extern int sotc_switch;
+extern int sovc_tmp_onoff;
 #endif
 
 #define WCD9310_RATES (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000 |\
@@ -4226,13 +4224,10 @@ static int tabla_startup(struct snd_pcm_substream *substream,
 #ifdef CONFIG_INTELLI_PLUG
 	wcd9310_is_playing = true;
 #endif
-	// scroff_volctr, scroff_trackctr: Disable when music stopped
+	// scroff_volctr: Temporary disable when music stopped
 	// - jollaman999 -
 #ifdef CONFIG_TOUCHSCREEN_SCROFF_VOLCTR
-	sovc_switch = 1;
-#endif
-#ifdef CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR
-	sotc_switch = 1;
+	sovc_tmp_onoff = 1;
 #endif
 
 	return 0;
@@ -4292,13 +4287,10 @@ static void tabla_shutdown(struct snd_pcm_substream *substream,
 #ifdef CONFIG_INTELLI_PLUG
 	wcd9310_is_playing = false;
 #endif
-	// scroff_volctr, scroff_trackctr: Disable when music stopped
+	// scroff_volctr: Temporary disable when music stopped
 	// - jollaman999 -
 #ifdef CONFIG_TOUCHSCREEN_SCROFF_VOLCTR
-	sovc_switch = 0;
-#endif
-#ifdef CONFIG_TOUCHSCREEN_SCROFF_TRACKCTR
-	sotc_switch = 0;
+	sovc_tmp_onoff = 0;
 #endif
 }
 
