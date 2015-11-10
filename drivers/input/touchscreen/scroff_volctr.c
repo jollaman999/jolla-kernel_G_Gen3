@@ -93,7 +93,7 @@ int sovc_tmp_onoff = 0;
 static cputime64_t touch_time_pre = 0;
 static int touch_x = 0, touch_y = 0;
 static int prev_x = 0, prev_y = 0;
-static bool is_new_touch = false;
+static bool is_new_touch_x = false, is_new_touch_y = false;
 static bool is_touching = false;
 static bool scr_suspended = false;
 static struct input_dev *sovc_input;
@@ -219,16 +219,23 @@ static void scroff_volctr_key_delayed_trigger(void)
 static void scroff_volctr_reset(void)
 {
 	is_touching = false;
-	is_new_touch = false;
+	is_new_touch_x = false;
+	is_new_touch_y = false;
 	control = NO_CONTROL;
 }
 
 /* init a new touch */
-static void new_touch(int x, int y)
+static void new_touch_x(int x)
 {
 	touch_time_pre = ktime_to_ms(ktime_get());
-	is_new_touch = true;
+	is_new_touch_x = true;
 	prev_x = x;
+}
+
+static void new_touch_y(int y)
+{
+	// touch_time_pre already calculated in 'new_touch_x'
+	is_new_touch_y = true;
 	prev_y = y;
 }
 
@@ -244,8 +251,8 @@ static void exec_key(int key)
 static void sovc_volume_input_callback(struct work_struct *unused)
 {
 	if (!is_touching) {
-		if (!is_new_touch)
-			new_touch(touch_x, touch_y);
+		if (!is_new_touch_y)
+			new_touch_y(touch_y);
 
 		if (ktime_to_ms(ktime_get()) - touch_time_pre < SOVC_TIME_GAP) {
 			if (prev_y - touch_y > SOVC_VOL_FEATHER) // Volume Up (down->up)
@@ -260,8 +267,8 @@ static void sovc_volume_input_callback(struct work_struct *unused)
 static void sovc_track_input_callback(struct work_struct *unused)
 {
 	if (!is_touching) {
-		if (!is_new_touch)
-			new_touch(touch_x, touch_y);
+		if (!is_new_touch_x)
+			new_touch_x(touch_x);
 
 		if (ktime_to_ms(ktime_get()) - touch_time_pre < SOVC_TIME_GAP) {
 			if (prev_x - touch_x > SOVC_TRACK_FEATHER) // Track Next (right->left)
