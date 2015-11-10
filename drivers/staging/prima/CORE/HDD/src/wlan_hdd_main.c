@@ -4217,7 +4217,6 @@ VOS_STATUS hdd_start_all_adapters( hdd_context_t *pHddCtx )
    hdd_adapter_list_node_t *pAdapterNode = NULL, *pNext = NULL;
    VOS_STATUS status;
    hdd_adapter_t      *pAdapter;
-   v_MACADDR_t  bcastMac = VOS_MAC_ADDR_BROADCAST_INITIALIZER;
    eConnectionState  connState;
 
    ENTER();
