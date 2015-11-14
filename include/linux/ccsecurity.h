@@ -415,8 +415,8 @@ static inline int ccs_pivot_root_permission(struct path *old_path,
 	return 0;
 }
 
-static inline int ccs_mount_permission(char *dev_name, struct path *path,
-				       char *type, unsigned long flags,
+static inline int ccs_mount_permission(const char *dev_name, struct path *path,
+				       const char *type, unsigned long flags,
 				       void *data_page)
 {
 	return 0;
