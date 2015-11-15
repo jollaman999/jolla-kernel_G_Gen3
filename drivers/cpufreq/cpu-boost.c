@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/input.h>
 #include <linux/time.h>
+#include <linux/earlysuspend.h>
 
 struct cpu_sync {
 	struct delayed_work boost_rem;
@@ -41,8 +42,9 @@ struct cpu_sync {
 static DEFINE_PER_CPU(struct cpu_sync, sync_info);
 static DEFINE_PER_CPU(struct task_struct *, thread);
 static struct workqueue_struct *cpu_boost_wq;
-
 static struct work_struct input_boost_work;
+
+static bool scr_suspended = false;
 
 static unsigned int boost_ms;
 module_param(boost_ms, uint, 0644);
@@ -274,6 +276,9 @@ static void cpuboost_input_event(struct input_handle *handle,
 	if (!input_boost_freq)
 		return;
 
+	if (scr_suspended)
+		return;
+
 	now = ktime_to_us(ktime_get());
 	if (now - last_input_time < MIN_INPUT_INTERVAL)
 		return;
@@ -356,6 +361,22 @@ static struct input_handler cpuboost_input_handler = {
 	.id_table       = cpuboost_ids,
 };
 
+static void cpu_boost_suspend(struct early_suspend *h)
+{
+	scr_suspended = true;
+}
+
+static void cpu_boost_resume(struct early_suspend *h)
+{
+	scr_suspended = false;
+}
+
+static struct early_suspend cpu_boost_early_suspend_handler = {
+	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
+	.suspend = cpu_boost_suspend,
+	.resume = cpu_boost_resume,
+};
+
 static int cpu_boost_init(void)
 {
 	int cpu, ret;
@@ -386,6 +407,8 @@ static int cpu_boost_init(void)
 	ret = input_register_handler(&cpuboost_input_handler);
 	if (ret)
 		pr_err("Cannot register cpuboost input handler.\n");
+
+	register_early_suspend(&cpu_boost_early_suspend_handler);
 
 	return ret;
 }
